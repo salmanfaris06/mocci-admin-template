@@ -1,0 +1,5 @@
+export { AppHeader } from './app-header'
+export { AppShell } from './app-shell'
+export { AppSidebar } from './app-sidebar'
+export { WorkspaceSwitcher, type Workspace } from './workspace-switcher'
+export type { NavConfig, NavGroup, NavItem } from './types'
