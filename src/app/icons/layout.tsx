@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 
 import { AppHeader, AppShell, AppSidebar, WorkspaceSwitcher } from '@/components/app-shell'
+import { AutoBreadcrumb } from '@/components/auto-breadcrumb'
 import { dashboardNav } from '@/config/nav'
 import { workspaces } from '@/config/workspaces'
 
@@ -22,7 +23,7 @@ export default function ComponentsLayout({ children }: { children: ReactNode }) 
       }
       header={
         <AppHeader>
-          <span className='text-sm font-medium'>Icons</span>
+          <AutoBreadcrumb config={dashboardNav} />
         </AppHeader>
       }
     >

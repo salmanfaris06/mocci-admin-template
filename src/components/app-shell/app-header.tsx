@@ -11,6 +11,11 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 
 import LanguageDropdown from '@/components/shadcn-studio/blocks/dropdown-language'
 import ProfileDropdown from '@/components/shadcn-studio/blocks/dropdown-profile'
+import { CommandPalette } from '@/components/command-palette'
+import { NotificationPanel } from '@/components/notification-panel'
+import { ThemeCustomizer } from '@/components/theme-customizer'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { dashboardNav } from '@/config/nav'
 
 type AppHeaderProps = {
   /** Content rendered between the sidebar trigger and the action area (e.g. breadcrumbs, page title). */
@@ -30,6 +35,10 @@ export function AppHeader({ children, actions }: AppHeaderProps) {
       <div className='flex items-center gap-1.5'>
         {actions ?? (
           <>
+            <CommandPalette config={dashboardNav} />
+            <NotificationPanel />
+            <ThemeToggle />
+            <ThemeCustomizer />
             <LanguageDropdown
               trigger={
                 <Button variant='ghost' size='icon'>

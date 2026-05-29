@@ -7,15 +7,11 @@ import { AutoBreadcrumb } from '@/components/auto-breadcrumb'
 import { dashboardNav } from '@/config/nav'
 import { workspaces } from '@/config/workspaces'
 
-export default function ChartsLayout({ children }: { children: ReactNode }) {
+export default function DashboardSaasLayout({ children }: { children: ReactNode }) {
   return (
     <AppShell
       sidebar={
-        <AppSidebar
-          config={dashboardNav}
-          isActive={(url) => url === '/charts'}
-          header={<WorkspaceSwitcher workspaces={workspaces} />}
-        />
+        <AppSidebar config={dashboardNav} header={<WorkspaceSwitcher workspaces={workspaces} />} />
       }
       header={
         <AppHeader>

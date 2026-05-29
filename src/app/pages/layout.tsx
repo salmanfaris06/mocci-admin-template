@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 
 import { AppHeader, AppShell, AppSidebar, WorkspaceSwitcher } from '@/components/app-shell'
+import { AutoBreadcrumb } from '@/components/auto-breadcrumb'
 import { dashboardNav } from '@/config/nav'
 import { workspaces } from '@/config/workspaces'
 
@@ -17,7 +18,7 @@ export default function PagesLayout({ children }: { children: ReactNode }) {
       }
       header={
         <AppHeader>
-          <span className='text-sm font-medium'>Pages</span>
+          <AutoBreadcrumb config={dashboardNav} />
         </AppHeader>
       }
     >

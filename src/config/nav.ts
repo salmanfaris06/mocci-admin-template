@@ -1,16 +1,31 @@
 import {
+  ActivityIcon,
   AlertTriangleIcon,
   AppWindowIcon,
   BoxIcon,
+  CalendarIcon,
   ChartNoAxesCombinedIcon,
   ChartPieIcon,
+  ClipboardListIcon,
+  CreditCardIcon,
+  FileTextIcon,
+  FolderIcon,
+  GaugeIcon,
+  HelpCircleIcon,
+  InboxIcon,
+  KanbanSquareIcon,
   LockIcon,
+  MailIcon,
+  MessagesSquareIcon,
   NavigationIcon,
   PanelLeftIcon,
+  RocketIcon,
   SettingsIcon,
   ShapesIcon,
   TableIcon,
-  TypeIcon
+  TypeIcon,
+  UserIcon,
+  UsersIcon
 } from 'lucide-react'
 
 import type { NavConfig } from '@/components/app-shell'
@@ -23,6 +38,11 @@ export const dashboardNav: NavConfig = {
           title: 'Dashboard',
           url: '/dashboard-shell-01',
           icon: ChartNoAxesCombinedIcon
+        },
+        {
+          title: 'SaaS Dashboard',
+          url: '/dashboard-saas',
+          icon: GaugeIcon
         }
       ]
     },
@@ -49,6 +69,20 @@ export const dashboardNav: NavConfig = {
           ]
         },
         { title: 'Settings', url: '/pages/settings', icon: SettingsIcon },
+        { title: 'Profile', url: '/pages/profile', icon: UserIcon },
+        { title: 'Pricing', url: '/pages/pricing', icon: CreditCardIcon },
+        { title: 'Onboarding', url: '/pages/onboarding', icon: RocketIcon },
+        { title: 'Form Examples', url: '/pages/form-examples', icon: ClipboardListIcon },
+        { title: 'Calendar', url: '/pages/calendar', icon: CalendarIcon },
+        { title: 'Inbox', url: '/pages/inbox', icon: MailIcon },
+        { title: 'Chat', url: '/pages/chat', icon: MessagesSquareIcon },
+        { title: 'Files', url: '/pages/files', icon: FolderIcon },
+        { title: 'Activity', url: '/pages/activity', icon: ActivityIcon },
+        { title: 'Kanban', url: '/pages/kanban', icon: KanbanSquareIcon },
+        { title: 'Team', url: '/pages/team', icon: UsersIcon },
+        { title: 'Invoice', url: '/pages/invoice', icon: FileTextIcon },
+        { title: 'Help Center', url: '/pages/help', icon: HelpCircleIcon },
+        { title: 'Empty States', url: '/pages/empty-states', icon: InboxIcon },
         { title: 'Data Table', url: '/pages/datatable', icon: TableIcon }
       ]
     },

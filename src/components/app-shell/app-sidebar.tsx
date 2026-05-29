@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronRightIcon } from 'lucide-react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -87,13 +88,13 @@ function NavMenuItem({ item, isActive }: { item: NavItem; isActive: (url: string
                     isActive={isActive(sub.url)}
                     aria-disabled={sub.disabled || undefined}
                   >
-                    <a
+                    <Link
                       href={sub.url}
                       target={sub.external ? '_blank' : undefined}
                       rel={sub.external ? 'noreferrer' : undefined}
                     >
                       <span>{sub.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuSubButton>
                   {sub.badge !== undefined ? (
                     <SidebarMenuBadge className='bg-primary/10 rounded-full'>{sub.badge}</SidebarMenuBadge>
@@ -115,14 +116,14 @@ function NavMenuItem({ item, isActive }: { item: NavItem; isActive: (url: string
         isActive={isActive(item.url)}
         aria-disabled={item.disabled || undefined}
       >
-        <a
+        <Link
           href={item.url}
           target={item.external ? '_blank' : undefined}
           rel={item.external ? 'noreferrer' : undefined}
         >
           {item.icon ? <item.icon /> : null}
           <span>{item.title}</span>
-        </a>
+        </Link>
       </SidebarMenuButton>
       {item.badge !== undefined ? (
         <SidebarMenuBadge className='bg-primary/10 top-1/2 right-2 -translate-y-1/2 rounded-full'>
