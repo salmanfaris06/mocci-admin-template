@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -38,51 +37,39 @@ export const apiSettings = pgTable("api_settings", {
   ...timestamps,
 });
 
-export const aiProviderKeys = pgTable(
-  "ai_provider_keys",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    provider: text("provider").notNull(),
-    encryptedApiKey: text("encrypted_api_key").notNull(),
-    isActive: boolean("is_active").default(true).notNull(),
-    isDefault: boolean("is_default").default(false).notNull(),
-    ...timestamps,
-  },
-  (table) => [uniqueIndex("ai_provider_keys_provider_idx").on(table.provider)],
-);
+export const aiProviderKeys = pgTable("ai_provider_keys", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: text("provider").notNull(),
+  encryptedApiKey: text("encrypted_api_key").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  ...timestamps,
+}, (table) => [uniqueIndex("ai_provider_keys_provider_idx").on(table.provider)]);
 
-export const modelPricing = pgTable(
-  "model_pricing",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    provider: text("provider").notNull(),
-    modelId: text("model_id").notNull(),
-    capability: aiCapabilityEnum("capability").notNull(),
-    inputPricePerMillion: numeric("input_price_per_million", { precision: 12, scale: 6 }).notNull(),
-    outputPricePerMillion: numeric("output_price_per_million", { precision: 12, scale: 6 }).notNull(),
-    isDefault: boolean("is_default").default(false).notNull(),
-    ...timestamps,
-  },
-  (table) => [uniqueIndex("model_pricing_provider_model_capability_idx").on(table.provider, table.modelId, table.capability)],
-);
+export const modelPricing = pgTable("model_pricing", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: text("provider").notNull(),
+  modelId: text("model_id").notNull(),
+  capability: aiCapabilityEnum("capability").notNull(),
+  inputPricePerMillion: numeric("input_price_per_million", { precision: 12, scale: 6 }).notNull(),
+  outputPricePerMillion: numeric("output_price_per_million", { precision: 12, scale: 6 }).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  ...timestamps,
+}, (table) => [uniqueIndex("model_pricing_provider_model_capability_idx").on(table.provider, table.modelId, table.capability)]);
 
-export const contacts = pgTable(
-  "contacts",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    remoteJid: text("remote_jid").notNull(),
-    phone: text("phone"),
-    displayName: text("display_name"),
-    avatarUrl: text("avatar_url"),
-    source: text("source").default("whatsapp").notNull(),
-    aiEnabled: boolean("ai_enabled").default(true).notNull(),
-    status: text("status").default("new").notNull(),
-    tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`).notNull(),
-    notes: text("notes"),
-    ...timestamps,
-  },
-  (table) => [uniqueIndex("contacts_remote_jid_idx").on(table.remoteJid)],
-);
+export const contacts = pgTable("contacts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  remoteJid: text("remote_jid").notNull(),
+  phone: text("phone"),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
+  source: text("source").default("whatsapp").notNull(),
+  aiEnabled: boolean("ai_enabled").default(true).notNull(),
+  status: text("status").default("new").notNull(),
+  tags: jsonb("tags").$type<string[]>().default([]).notNull(),
+  notes: text("notes"),
+  ...timestamps,
+}, (table) => [uniqueIndex("contacts_remote_jid_idx").on(table.remoteJid)]);
 
 export const conversations = pgTable("conversations", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -95,26 +82,22 @@ export const conversations = pgTable("conversations", {
   ...timestamps,
 });
 
-export const messages = pgTable(
-  "messages",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    conversationId: uuid("conversation_id").references(() => conversations.id).notNull(),
-    evolutionMessageId: text("evolution_message_id"),
-    direction: messageDirectionEnum("direction").notNull(),
-    senderType: senderTypeEnum("sender_type").notNull(),
-    messageType: messageTypeEnum("message_type").default("unknown").notNull(),
-    text: text("text"),
-    caption: text("caption"),
-    transcript: text("transcript"),
-    visionSummary: text("vision_summary"),
-    rawMetadata: jsonb("raw_metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`).notNull(),
-    status: text("status").default("received").notNull(),
-    sentAt: timestamp("sent_at", { withTimezone: true }),
-    ...timestamps,
-  },
-  (table) => [uniqueIndex("messages_evolution_message_id_idx").on(table.evolutionMessageId)],
-);
+export const messages = pgTable("messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  conversationId: uuid("conversation_id").references(() => conversations.id).notNull(),
+  evolutionMessageId: text("evolution_message_id"),
+  direction: messageDirectionEnum("direction").notNull(),
+  senderType: senderTypeEnum("sender_type").notNull(),
+  messageType: messageTypeEnum("message_type").default("unknown").notNull(),
+  text: text("text"),
+  caption: text("caption"),
+  transcript: text("transcript"),
+  visionSummary: text("vision_summary"),
+  rawMetadata: jsonb("raw_metadata").$type<Record<string, unknown>>().default({}).notNull(),
+  status: text("status").default("received").notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  ...timestamps,
+}, (table) => [uniqueIndex("messages_evolution_message_id_idx").on(table.evolutionMessageId)]);
 
 export const aiAgents = pgTable("ai_agents", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -158,7 +141,7 @@ export const aiUsageLogs = pgTable("ai_usage_logs", {
   inputPricePerMillionSnapshot: numeric("input_price_per_million_snapshot", { precision: 12, scale: 6 }).notNull(),
   outputPricePerMillionSnapshot: numeric("output_price_per_million_snapshot", { precision: 12, scale: 6 }).notNull(),
   computedCostUsd: numeric("computed_cost_usd", { precision: 12, scale: 6 }).notNull(),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`).notNull(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
   ...timestamps,
 });
 
@@ -183,20 +166,16 @@ export const pipelineItems = pgTable("pipeline_items", {
   ...timestamps,
 });
 
-export const webhookEvents = pgTable(
-  "webhook_events",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    eventType: text("event_type").notNull(),
-    idempotencyKey: text("idempotency_key").notNull(),
-    status: text("status").default("received").notNull(),
-    retryCount: integer("retry_count").default(0).notNull(),
-    rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>().notNull(),
-    errorMessage: text("error_message"),
-    ...timestamps,
-  },
-  (table) => [uniqueIndex("webhook_events_idempotency_key_idx").on(table.idempotencyKey)],
-);
+export const webhookEvents = pgTable("webhook_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventType: text("event_type").notNull(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  status: text("status").default("received").notNull(),
+  retryCount: integer("retry_count").default(0).notNull(),
+  rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>().notNull(),
+  errorMessage: text("error_message"),
+  ...timestamps,
+}, (table) => [uniqueIndex("webhook_events_idempotency_key_idx").on(table.idempotencyKey)]);
 
 export const jobs = pgTable("jobs", {
   id: uuid("id").primaryKey().defaultRandom(),
