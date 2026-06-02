@@ -602,11 +602,18 @@ function SidebarMenuBadge({
 function SidebarMenuSkeleton({
   className,
   showIcon = false,
+  seed,
   ...props
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean
+  seed?: string | number
 }) {
-  const width = "70%"
+  const widthSeed = `${seed ?? className ?? "sidebar-menu-skeleton"}:${showIcon}`
+  const widthHash = Array.from(widthSeed).reduce(
+    (hash, character) => hash + character.charCodeAt(0),
+    0
+  )
+  const width = `${50 + (widthHash % 41)}%`
 
   return (
     <div
