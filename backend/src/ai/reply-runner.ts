@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../../../src/server/db";
 import { aiAgents, aiRuns, aiUsageLogs, contacts, conversations, messages, modelPricing } from "../../../src/server/db/schema";
 import { calculateTokenCostUsd } from "../../../src/server/domain/costing";
@@ -15,7 +15,7 @@ export type RunAiReplyInput = {
 };
 
 export async function runAiReply(input: RunAiReplyInput) {
-  const [agent] = await db.select().from(aiAgents).where(eq(aiAgents.isDefault, true)).limit(1);
+  const [agent] = await db.select().from(aiAgents).where(and(eq(aiAgents.isDefault, true), eq(aiAgents.isActive, true))).limit(1);
   const [message] = await db.select().from(messages).where(eq(messages.id, input.messageId)).limit(1);
   const [contact] = await db.select().from(contacts).where(eq(contacts.id, input.contactId)).limit(1);
   const [conversation] = await db.select().from(conversations).where(eq(conversations.id, input.conversationId)).limit(1);
@@ -32,7 +32,7 @@ export async function runAiReply(input: RunAiReplyInput) {
     const prompt = [`Contact: ${contact.displayName ?? contact.phone ?? contact.remoteJid}`, `Message: ${message.text ?? message.caption ?? message.transcript ?? message.visionSummary ?? ""}`].join("\n");
     const result = await generateText({ model: openai(agent.modelId), system: agent.systemPrompt, prompt, temperature: Number(agent.temperature), maxOutputTokens: agent.maxOutputTokens, abortSignal: AbortSignal.timeout(agent.timeoutSeconds * 1000) });
     const [outbound] = await db.insert(messages).values({ conversationId: conversation.id, direction: "outbound", senderType: "ai", messageType: "text", text: result.text, status: "pending", sentAt: new Date() }).returning();
-    const [pricing] = await db.select().from(modelPricing).where(eq(modelPricing.modelId, agent.modelId)).limit(1);
+    const [pricing] = await db.select().from(modelPricing).where(and(eq(modelPricing.provider, agent.provider), eq(modelPricing.modelId, agent.modelId), eq(modelPricing.capability, "chat"))).limit(1);
     const inputTokens = result.usage.inputTokens ?? 0;
     const outputTokens = result.usage.outputTokens ?? 0;
     const inputPrice = pricing?.inputPricePerMillion ?? "0.000000";
