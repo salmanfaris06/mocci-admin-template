@@ -2,9 +2,30 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/mocci_crm";
+function createDatabase() {
+  const connectionString = process.env.DATABASE_URL;
 
-const client = postgres(connectionString, { prepare: false });
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is required");
+  }
 
-export const db = drizzle(client, { schema });
-export type Db = typeof db;
+  const client = postgres(connectionString, { prepare: false });
+  return drizzle(client, { schema });
+}
+
+type Database = ReturnType<typeof createDatabase>;
+
+let database: Database | undefined;
+
+function getDatabase() {
+  database ??= createDatabase();
+  return database;
+}
+
+export const db = new Proxy({} as Database, {
+  get(_target, property, receiver) {
+    return Reflect.get(getDatabase(), property, receiver);
+  },
+});
+
+export type Db = Database;
