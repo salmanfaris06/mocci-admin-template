@@ -58,13 +58,13 @@ export const dashboardNav: NavConfig = {
           url: '#',
           icon: BotIcon,
           items: [
-            { title: 'Overview', url: '/crm' },
+            { title: 'Dashboard', url: '/crm/dashboard' },
             { title: 'Inbox', url: '/crm/inbox' },
             { title: 'Contacts', url: '/crm/contacts' },
             { title: 'Pipeline', url: '/crm/pipeline' },
             { title: 'AI Agent', url: '/crm/ai-agent' },
             { title: 'Analytics', url: '/crm/analytics' },
-            { title: 'Settings', url: '/crm/settings' }
+            { title: 'API Settings', url: '/crm/api-settings' }
           ]
         }
       ]
