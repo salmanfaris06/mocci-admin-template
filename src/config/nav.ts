@@ -28,6 +28,30 @@ import {
 
 import type { NavConfig } from '@/components/app-shell'
 
+export const crmNav: NavConfig = {
+  groups: [
+    {
+      label: 'CRM AI',
+      items: [
+        {
+          title: 'CRM AI',
+          url: '#',
+          icon: BotIcon,
+          items: [
+            { title: 'Dashboard', url: '/crm/dashboard' },
+            { title: 'Chat', url: '/crm/inbox' },
+            { title: 'Contacts', url: '/crm/contacts' },
+            { title: 'Pipeline', url: '/crm/pipeline' },
+            { title: 'AI Agent', url: '/crm/ai-agent' },
+            { title: 'Analytics', url: '/crm/analytics' },
+            { title: 'API Settings', url: '/crm/api-settings' }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
 export const dashboardNav: NavConfig = {
   groups: [
     {
