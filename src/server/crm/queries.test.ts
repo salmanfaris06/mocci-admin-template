@@ -44,4 +44,27 @@ describe("CRM demo data without database configuration", () => {
     await expect(getAiRunHistory()).resolves.not.toHaveLength(0);
     await expect(getAiAgents()).resolves.not.toHaveLength(0);
   });
+
+  it("returns demo chat messages for a selected demo conversation when DATABASE_URL is missing", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+    const { getConversationMessages, getRecentConversations } = await import("./queries");
+
+    const [conversation] = await getRecentConversations(1);
+
+    expect(conversation).toBeDefined();
+    await expect(getConversationMessages(conversation.id)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          conversationId: conversation.id,
+          direction: "inbound",
+          body: expect.any(String),
+        }),
+        expect.objectContaining({
+          conversationId: conversation.id,
+          direction: "outbound",
+          body: expect.any(String),
+        }),
+      ]),
+    );
+  });
 });

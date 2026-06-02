@@ -84,6 +84,111 @@ const demoPipelineBoard = [
   { id: "demo-stage-lost", name: "Lost", position: 5, color: "red", items: [] },
 ];
 
+const demoMessages = {
+  "demo-conversation-1": [
+    {
+      id: "demo-message-1-1",
+      conversationId: "demo-conversation-1",
+      contactId: "demo-contact-1",
+      externalMessageId: "demo-wa-1-1",
+      direction: "inbound" as const,
+      body: "Halo, saya tertarik paket WhatsApp automation untuk klinik. Bisa bantu jelaskan alurnya?",
+      messageType: "text" as const,
+      status: "read" as const,
+      metadata: {},
+      createdAt: new Date("2026-06-02T09:18:00.000Z"),
+    },
+    {
+      id: "demo-message-1-2",
+      conversationId: "demo-conversation-1",
+      contactId: "demo-contact-1",
+      externalMessageId: "demo-wa-1-2",
+      direction: "outbound" as const,
+      body: "Tentu Dok. Biasanya flow-nya: pasien chat WhatsApp, AI jawab FAQ, lalu lead masuk CRM untuk follow-up admin.",
+      messageType: "text" as const,
+      status: "delivered" as const,
+      metadata: { actor: "ai" },
+      createdAt: new Date("2026-06-02T09:20:00.000Z"),
+    },
+    {
+      id: "demo-message-1-3",
+      conversationId: "demo-conversation-1",
+      contactId: "demo-contact-1",
+      externalMessageId: "demo-wa-1-3",
+      direction: "inbound" as const,
+      body: "Kalau untuk 2 cabang klinik dan butuh laporan harian, bisa?",
+      messageType: "text" as const,
+      status: "read" as const,
+      metadata: {},
+      createdAt: new Date("2026-06-02T09:23:00.000Z"),
+    },
+    {
+      id: "demo-message-1-4",
+      conversationId: "demo-conversation-1",
+      contactId: "demo-contact-1",
+      externalMessageId: "demo-wa-1-4",
+      direction: "outbound" as const,
+      body: "Bisa. Saya bisa siapkan dashboard per cabang, ringkasan percakapan, dan notifikasi jika ada pasien yang perlu dibalas manusia.",
+      messageType: "text" as const,
+      status: "sent" as const,
+      metadata: { actor: "ai" },
+      createdAt: new Date("2026-06-02T09:24:00.000Z"),
+    },
+  ],
+  "demo-conversation-2": [
+    {
+      id: "demo-message-2-1",
+      conversationId: "demo-conversation-2",
+      contactId: "demo-contact-2",
+      externalMessageId: "demo-wa-2-1",
+      direction: "inbound" as const,
+      body: "Pagi, bisa dibantu follow up proposal kemarin? Tim saya minta estimasi timeline implementasi.",
+      messageType: "text" as const,
+      status: "read" as const,
+      metadata: {},
+      createdAt: new Date("2026-06-02T08:10:00.000Z"),
+    },
+    {
+      id: "demo-message-2-2",
+      conversationId: "demo-conversation-2",
+      contactId: "demo-contact-2",
+      externalMessageId: "demo-wa-2-2",
+      direction: "outbound" as const,
+      body: "Siap Pak Raka. Untuk CRM + WhatsApp automation biasanya 10-14 hari kerja setelah kebutuhan final disetujui.",
+      messageType: "text" as const,
+      status: "failed" as const,
+      metadata: { actor: "ai", note: "Demo failed state" },
+      createdAt: new Date("2026-06-02T08:11:00.000Z"),
+    },
+  ],
+  "demo-conversation-3": [
+    {
+      id: "demo-message-3-1",
+      conversationId: "demo-conversation-3",
+      contactId: "demo-contact-3",
+      externalMessageId: "demo-wa-3-1",
+      direction: "inbound" as const,
+      body: "Berapa harga setup CRM + AI agent untuk WhatsApp?",
+      messageType: "text" as const,
+      status: "read" as const,
+      metadata: {},
+      createdAt: new Date("2026-06-01T16:45:00.000Z"),
+    },
+    {
+      id: "demo-message-3-2",
+      conversationId: "demo-conversation-3",
+      contactId: "demo-contact-3",
+      externalMessageId: "demo-wa-3-2",
+      direction: "outbound" as const,
+      body: "Paket awal mulai dari Rp8,5 juta untuk setup CRM, integrasi WhatsApp, dan satu AI agent dengan knowledge base dasar.",
+      messageType: "text" as const,
+      status: "sent" as const,
+      metadata: { actor: "ai" },
+      createdAt: new Date("2026-06-01T16:46:00.000Z"),
+    },
+  ],
+};
+
 const demoAiRuns = [
   { id: "demo-run-1", status: "succeeded" as const, latencyMs: 1840, errorMessage: null, createdAt: new Date("2026-06-02T09:25:00.000Z"), contactName: "Dr. Nadira Putri" },
   { id: "demo-run-2", status: "timeout" as const, latencyMs: 45_000, errorMessage: "Fallback timeout message sent", createdAt: new Date("2026-06-02T08:11:00.000Z"), contactName: "Raka Pratama" },
@@ -133,7 +238,7 @@ export async function getRecentConversations(limit = 20) {
 }
 
 export async function getConversationMessages(conversationId: string) {
-  if (!isDatabaseConfigured()) return [];
+  if (!isDatabaseConfigured()) return demoMessages[conversationId as keyof typeof demoMessages] ?? [];
 
   return db.select().from(messages).where(eq(messages.conversationId, conversationId)).orderBy(messages.createdAt);
 }
