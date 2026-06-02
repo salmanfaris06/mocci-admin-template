@@ -1347,6 +1347,7 @@ function ChatComposer({
                 placeholder={placeholder}
                 disabled={disabled}
                 rows={1}
+                suppressHydrationWarning
                 className="flex-1 resize-none bg-transparent py-[10px] pl-4 pr-12 text-[15px] leading-[22px] tracking-[-0.01em] text-[var(--chat-text-primary)] placeholder:text-[var(--chat-text-tertiary)] focus:outline-none disabled:opacity-50"
                 style={{ overflow: "hidden", maxHeight: "160px" }}
               />
