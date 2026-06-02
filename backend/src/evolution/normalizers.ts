@@ -1,4 +1,4 @@
-import type { MessageDirection, MessageType, SenderType } from "../../src/server/domain/types";
+import type { MessageDirection, MessageType, SenderType } from "../../../src/server/domain/types";
 
 type EvolutionWebhookPayload = { event?: string; instance?: string; data?: Record<string, unknown> };
 
