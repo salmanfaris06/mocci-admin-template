@@ -5,7 +5,7 @@ import { processWebhookJob } from "./process-webhook";
 import { markJobFailed } from "./queue";
 
 export async function runNextJob(workerId = "default-worker") {
-  const [job] = await db.select().from(jobs).where(and(eq(jobs.status, "queued"), lte(jobs.scheduledAt, new Date()))).orderBy(asc(jobs.scheduledAt)).limit(1);
+  const [job] = await db.select().from(jobs).where(and(eq(jobs.status, "queued"), eq(jobs.type, "process_webhook"), lte(jobs.scheduledAt, new Date()))).orderBy(asc(jobs.scheduledAt)).limit(1);
   if (!job) return false;
 
   await db.update(jobs).set({ status: "running", lockedAt: new Date(), lockedBy: workerId, attempts: job.attempts + 1, updatedAt: new Date() }).where(eq(jobs.id, job.id));
