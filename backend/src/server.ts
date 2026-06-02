@@ -3,6 +3,7 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { getConfig } from "./config";
 import { registerHealthRoute } from "./routes/health";
+import { registerEvolutionWebhookRoute } from "./routes/webhooks-evolution";
 
 export function buildServer() {
   const config = getConfig();
@@ -10,6 +11,7 @@ export function buildServer() {
   app.register(cors, { origin: config.DASHBOARD_ORIGIN });
   app.register(rateLimit, { max: 120, timeWindow: "1 minute" });
   app.register(registerHealthRoute);
+  app.register(registerEvolutionWebhookRoute);
   return app;
 }
 
