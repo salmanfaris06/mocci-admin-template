@@ -15,10 +15,9 @@ async function seedPipelineStages() {
   ];
 
   for (const stage of stages) {
-    const [existing] = await db.select({ id: pipelineStages.id }).from(pipelineStages).where(eq(pipelineStages.name, stage.name)).limit(1);
-    if (!existing) {
-      await db.insert(pipelineStages).values(stage);
-    }
+    await db.insert(pipelineStages).values(stage).onConflictDoNothing({
+      target: pipelineStages.name,
+    });
   }
 }
 

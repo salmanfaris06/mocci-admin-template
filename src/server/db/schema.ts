@@ -22,7 +22,7 @@ export const jobStatusEnum = pgEnum("job_status", ["queued", "running", "succeed
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
 };
 
 export const apiSettings = pgTable("api_settings", {
@@ -151,7 +151,7 @@ export const pipelineStages = pgTable("pipeline_stages", {
   position: integer("position").notNull(),
   color: text("color").notNull(),
   ...timestamps,
-});
+}, (table) => [uniqueIndex("pipeline_stages_name_idx").on(table.name)]);
 
 export const pipelineItems = pgTable("pipeline_items", {
   id: uuid("id").primaryKey().defaultRandom(),

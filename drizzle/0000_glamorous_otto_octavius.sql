@@ -200,4 +200,5 @@ CREATE UNIQUE INDEX "ai_provider_keys_provider_idx" ON "ai_provider_keys" USING 
 CREATE UNIQUE INDEX "contacts_remote_jid_idx" ON "contacts" USING btree ("remote_jid");--> statement-breakpoint
 CREATE UNIQUE INDEX "messages_evolution_message_id_idx" ON "messages" USING btree ("evolution_message_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "model_pricing_provider_model_capability_idx" ON "model_pricing" USING btree ("provider","model_id","capability");--> statement-breakpoint
+CREATE UNIQUE INDEX "pipeline_stages_name_idx" ON "pipeline_stages" USING btree ("name");--> statement-breakpoint
 CREATE UNIQUE INDEX "webhook_events_idempotency_key_idx" ON "webhook_events" USING btree ("idempotency_key");
