@@ -1,5 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { maskSecret } from "@/server/security/crypto";
+import { saveEvolutionSettings, saveOpenAiKey } from "./actions";
 
 export default function CrmSettingsPage() {
-  return <div className="space-y-6 p-6"><h1 className="font-semibold text-3xl tracking-tight">CRM Settings</h1><Card><CardHeader><CardTitle>API Settings</CardTitle></CardHeader><CardContent className="text-muted-foreground text-sm">Evolution API and OpenAI key forms are added in the settings actions task.</CardContent></Card></div>;
+  const maskedEvolution = process.env.EVOLUTION_API_KEY ? maskSecret(process.env.EVOLUTION_API_KEY) : "Not configured";
+  const maskedOpenAi = process.env.OPENAI_API_KEY ? maskSecret(process.env.OPENAI_API_KEY) : "Not configured";
+
+  return <div className="space-y-6 p-6"><div><h1 className="font-semibold text-3xl tracking-tight">CRM Settings</h1><p className="text-muted-foreground">Store API credentials encrypted. Full secrets are never rendered back to the browser.</p></div><div className="grid gap-6 lg:grid-cols-2"><Card><CardHeader><CardTitle>Evolution API</CardTitle><CardDescription>Current env fallback: {maskedEvolution}</CardDescription></CardHeader><CardContent><form action={saveEvolutionSettings} className="space-y-4"><div className="space-y-2"><Label htmlFor="evolutionBaseUrl">Base URL</Label><Input id="evolutionBaseUrl" name="evolutionBaseUrl" placeholder="https://evolution.example.com" /></div><div className="space-y-2"><Label htmlFor="evolutionInstanceName">Instance name</Label><Input id="evolutionInstanceName" name="evolutionInstanceName" placeholder="main" /></div><div className="space-y-2"><Label htmlFor="evolutionApiKey">API key</Label><Input id="evolutionApiKey" name="evolutionApiKey" type="password" autoComplete="new-password" /></div><div className="space-y-2"><Label htmlFor="webhookUrl">Webhook URL</Label><Input id="webhookUrl" name="webhookUrl" placeholder="https://api.example.com/webhooks/evolution" /></div><button className="rounded-md bg-primary px-4 py-2 text-primary-foreground text-sm" type="submit">Save Evolution settings</button></form></CardContent></Card><Card><CardHeader><CardTitle>OpenAI</CardTitle><CardDescription>Current env fallback: {maskedOpenAi}</CardDescription></CardHeader><CardContent><form action={saveOpenAiKey} className="space-y-4"><div className="space-y-2"><Label htmlFor="openAiApiKey">OpenAI API key</Label><Input id="openAiApiKey" name="openAiApiKey" type="password" autoComplete="new-password" /></div><button className="rounded-md bg-primary px-4 py-2 text-primary-foreground text-sm" type="submit">Save OpenAI key</button></form></CardContent></Card></div></div>;
 }
