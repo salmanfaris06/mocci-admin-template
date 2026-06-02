@@ -43,19 +43,23 @@ export function ComposePanel({ mode, source, onClose }: ComposePanelProps) {
   const [sending, setSending] = useState(false)
 
   useEffect(() => {
-    if (mode === 'reply' && source) {
-      setTo(source.from.email)
-      setSubject(source.subject.startsWith('Re:') ? source.subject : `Re: ${source.subject}`)
-      setBody(quotedBody(source))
-    } else if (mode === 'forward' && source) {
-      setTo('')
-      setSubject(source.subject.startsWith('Fwd:') ? source.subject : `Fwd: ${source.subject}`)
-      setBody(quotedBody(source))
-    } else {
-      setTo('')
-      setSubject('')
-      setBody('')
-    }
+    const timeout = window.setTimeout(() => {
+      if (mode === 'reply' && source) {
+        setTo(source.from.email)
+        setSubject(source.subject.startsWith('Re:') ? source.subject : `Re: ${source.subject}`)
+        setBody(quotedBody(source))
+      } else if (mode === 'forward' && source) {
+        setTo('')
+        setSubject(source.subject.startsWith('Fwd:') ? source.subject : `Fwd: ${source.subject}`)
+        setBody(quotedBody(source))
+      } else {
+        setTo('')
+        setSubject('')
+        setBody('')
+      }
+    }, 0)
+
+    return () => window.clearTimeout(timeout)
   }, [mode, source])
 
   const send = async () => {

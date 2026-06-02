@@ -58,8 +58,12 @@ export function TaskDetailSheet({
   const [tagInput, setTagInput] = useState('')
 
   useEffect(() => {
-    setDraft(task)
-    setTagInput('')
+    const timeout = window.setTimeout(() => {
+      setDraft(task)
+      setTagInput('')
+    }, 0)
+
+    return () => window.clearTimeout(timeout)
   }, [task])
 
   if (!task || !draft) return null

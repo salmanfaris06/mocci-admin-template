@@ -47,15 +47,20 @@ export function RoleDialog({ open, onOpenChange, role, onSave }: RoleDialogProps
 
   useEffect(() => {
     if (!open) return
-    if (role) {
-      setName(role.name)
-      setDescription(role.description)
-      setPermissions(role.permissions)
-    } else {
-      setName(emptyDraft.name)
-      setDescription(emptyDraft.description)
-      setPermissions(emptyDraft.permissions)
-    }
+
+    const timeout = window.setTimeout(() => {
+      if (role) {
+        setName(role.name)
+        setDescription(role.description)
+        setPermissions(role.permissions)
+      } else {
+        setName(emptyDraft.name)
+        setDescription(emptyDraft.description)
+        setPermissions(emptyDraft.permissions)
+      }
+    }, 0)
+
+    return () => window.clearTimeout(timeout)
   }, [role, open])
 
   const toggle = (id: Permission) => {

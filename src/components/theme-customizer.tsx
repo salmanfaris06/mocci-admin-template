@@ -25,17 +25,21 @@ export function ThemeCustomizer() {
   const [radius, setRadius] = useState<number>(defaultRadius)
 
   useEffect(() => {
-    setMounted(true)
-    const savedPreset = localStorage.getItem(STORAGE_KEYS.preset) ?? defaultPreset
-    const savedRadius = Number(localStorage.getItem(STORAGE_KEYS.radius) ?? defaultRadius)
-    setPreset(savedPreset)
-    setRadius(savedRadius)
+    const timeout = window.setTimeout(() => {
+      setMounted(true)
+      const savedPreset = localStorage.getItem(STORAGE_KEYS.preset) ?? defaultPreset
+      const savedRadius = Number(localStorage.getItem(STORAGE_KEYS.radius) ?? defaultRadius)
+      setPreset(savedPreset)
+      setRadius(savedRadius)
+    }, 0)
+
+    return () => window.clearTimeout(timeout)
   }, [])
 
   const handlePreset = (name: string) => {
     setPreset(name)
     localStorage.setItem(STORAGE_KEYS.preset, name)
-    document.documentElement.dataset.themePreset = name
+    document.documentElement.setAttribute('data-theme-preset', name)
   }
 
   const handleRadius = (value: number) => {
