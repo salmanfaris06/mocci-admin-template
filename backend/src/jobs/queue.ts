@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../../../src/server/db";
 import { jobs } from "../../../src/server/db/schema";
 
-export type JobType = "process_webhook" | "ai_reply" | "send_whatsapp";
+export type JobType = "process_webhook" | "ai_reply";
 
 export async function enqueueJob(type: JobType, payload: Record<string, unknown>) {
   const [job] = await db.insert(jobs).values({ type, payload }).returning();
