@@ -171,7 +171,7 @@ export default async function CrmInboxPage() {
                 )}
 
                 <div className="border-border border-t p-4">
-                  <ChatComposer disabled onSend={() => undefined} placeholder="Preview only — sending is not connected yet" />
+                  <ChatComposer disabled placeholder="Preview only — sending is not connected yet" />
                   <p className="mt-3 flex items-center gap-2 text-muted-foreground text-xs">
                     <SendIcon className="size-3" />
                     Sending is preview-only in demo mode. Connect Evolution API actions to send real WhatsApp replies.
