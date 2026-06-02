@@ -22,7 +22,8 @@ import {
   TableIcon,
   TypeIcon,
   UserIcon,
-  UsersIcon
+  UsersIcon,
+  BotIcon
 } from 'lucide-react'
 
 import type { NavConfig } from '@/components/app-shell'
@@ -45,6 +46,26 @@ export const dashboardNav: NavConfig = {
           title: 'Analytics',
           url: '/analytics',
           icon: ChartPieIcon
+        }
+      ]
+    },
+
+    {
+      label: 'CRM AI',
+      items: [
+        {
+          title: 'CRM AI',
+          url: '#',
+          icon: BotIcon,
+          items: [
+            { title: 'Overview', url: '/crm' },
+            { title: 'Inbox', url: '/crm/inbox' },
+            { title: 'Contacts', url: '/crm/contacts' },
+            { title: 'Pipeline', url: '/crm/pipeline' },
+            { title: 'AI Agent', url: '/crm/ai-agent' },
+            { title: 'Analytics', url: '/crm/analytics' },
+            { title: 'Settings', url: '/crm/settings' }
+          ]
         }
       ]
     },
