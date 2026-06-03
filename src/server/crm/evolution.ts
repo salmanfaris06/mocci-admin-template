@@ -35,6 +35,38 @@ export async function getEvolutionClient() {
   return new EvolutionClient({ apiKey, baseUrl, instanceName });
 }
 
+function readStringField(value: unknown, path: string[]): string | undefined {
+  let cursor = value;
+
+  for (const segment of path) {
+    if (!cursor || typeof cursor !== "object" || !(segment in cursor)) return undefined;
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+
+  return typeof cursor === "string" ? cursor : undefined;
+}
+
+export function extractQrCodeData(response: unknown) {
+  const code = readStringField(response, ["code"]) ?? readStringField(response, ["base64"]) ?? readStringField(response, ["qrcode", "base64"]) ?? readStringField(response, ["qrcode", "code"]);
+  const pairingCode = readStringField(response, ["pairingCode"]);
+  const image = code?.startsWith("data:image") ? code : code ? `data:image/png;base64,${code}` : undefined;
+
+  return { image, pairingCode, raw: response };
+}
+
+export async function createEvolutionInstance() {
+  const settings = await getEvolutionSettings();
+  const client = new EvolutionClient(settings);
+  const [dbSettings] = settings.settingsId ? await db.select().from(apiSettings).where(eq(apiSettings.id, settings.settingsId)).limit(1) : [];
+
+  return client.createInstance(dbSettings?.webhookUrl ?? undefined);
+}
+
+export async function connectEvolutionInstance() {
+  const client = await getEvolutionClient();
+  return extractQrCodeData(await client.connectInstance());
+}
+
 export async function testEvolutionConnection() {
   const settings = await getEvolutionSettings();
   const client = new EvolutionClient(settings);

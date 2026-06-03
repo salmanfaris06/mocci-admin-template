@@ -20,6 +20,21 @@ export class EvolutionClient {
     return this.request(`/instance/setPresence/${this.options.instanceName}`, { method: "POST", body: JSON.stringify({ presence }) });
   }
 
+  createInstance(webhookUrl?: string) {
+    return this.request("/instance/create", {
+      method: "POST",
+      body: JSON.stringify({
+        instanceName: this.options.instanceName,
+        qrcode: true,
+        webhook: webhookUrl ? { enabled: true, url: webhookUrl } : undefined,
+      }),
+    });
+  }
+
+  connectInstance() {
+    return this.request(`/instance/connect/${this.options.instanceName}`);
+  }
+
   getConnectionState() {
     return this.request(`/instance/connectionState/${this.options.instanceName}`);
   }

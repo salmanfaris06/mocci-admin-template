@@ -6,7 +6,8 @@ import { db } from "@/server/db";
 import { apiSettings } from "@/server/db/schema";
 import { maskSecret } from "@/server/security/crypto";
 
-import { saveEvolutionSettings, saveOpenAiKey, testEvolutionSettings } from "./actions";
+import { saveEvolutionSettings, saveOpenAiKey } from "./actions";
+import { WhatsAppLoginCard } from "./whatsapp-login-card";
 
 export const dynamic = "force-dynamic";
 
@@ -54,13 +55,10 @@ export default async function CrmSettingsPage() {
               <div className="font-medium">Connection state</div>
               <p className="mt-1 break-words text-muted-foreground">{connectionState}</p>
             </div>
-            <form action={testEvolutionSettings}>
-              <Button type="submit" variant="outline">
-                Test Evolution connection
-              </Button>
-            </form>
           </CardContent>
         </Card>
+        <WhatsAppLoginCard initialConnectionState={connectionState} />
+
         <Card>
           <CardHeader>
             <CardTitle>OpenAI</CardTitle>

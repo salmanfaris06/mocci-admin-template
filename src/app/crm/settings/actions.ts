@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { aiProviderKeys, apiSettings } from "@/server/db/schema";
-import { testEvolutionConnection } from "@/server/crm/evolution";
+import { connectEvolutionInstance, createEvolutionInstance, testEvolutionConnection } from "@/server/crm/evolution";
 import { encryptSecret } from "@/server/security/crypto";
 
 function requiredString(formData: FormData, name: string) {
@@ -39,8 +39,21 @@ export async function saveEvolutionSettings(formData: FormData) {
 }
 
 export async function testEvolutionSettings() {
-  await testEvolutionConnection();
+  const state = await testEvolutionConnection();
   revalidatePath("/crm/settings");
+  return state;
+}
+
+export async function createWhatsAppInstance() {
+  const response = await createEvolutionInstance();
+  revalidatePath("/crm/settings");
+  return response;
+}
+
+export async function connectWhatsAppInstance() {
+  const qr = await connectEvolutionInstance();
+  revalidatePath("/crm/settings");
+  return qr;
 }
 
 export async function saveOpenAiKey(formData: FormData) {
