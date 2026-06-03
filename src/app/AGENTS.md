@@ -20,8 +20,10 @@ npm run build
 - DO: Keep route-specific mock data near the route, like `src/app/dashboard/data.tsx`, `src/app/pages/billing/data.ts`, and `src/app/pages/kanban/data.ts`.
 - DO: Put page-specific helper components beside the page when they are not reused, like `src/app/pages/inbox/components.tsx` and `src/app/pages/ecommerce/products/product-form-sheet.tsx`.
 - DO: Use reusable components from `@/components/*` and primitives from `@/components/ui/*` instead of duplicating styles per route.
+- DO: Keep CRM page wrappers consistent with existing CRM routes: direct first-child `PageHeader`, `space-y-6` page rhythm, no page-level `p-6`, and action headers using `flex flex-wrap items-center justify-between gap-3`.
 - DON'T: Add reusable dashboard shell, table, theme, or primitive components inside route folders; place them in `src/components/`.
 - DON'T: Add client-side fetching spinners by default; prefer server-rendered route content plus `loading.tsx` skeletons.
+- DON'T: Add decorative icons to CRM page headers unless the existing route pattern explicitly uses them.
 - Client components must start with `"use client"` and should be limited to interactive UI such as forms, drag/drop, tabs, panels, and keyboard shortcuts.
 
 ## Key Files

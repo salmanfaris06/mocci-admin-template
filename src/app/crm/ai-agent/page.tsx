@@ -1,8 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BotIcon, SendIcon, SparklesIcon, Trash2Icon } from 'lucide-react'
+import { DefaultChatTransport } from 'ai'
+import { AuiIf, AssistantRuntimeProvider, ComposerPrimitive, MessagePrimitive, ThreadPrimitive } from '@assistant-ui/react'
+import { useChatRuntime } from '@assistant-ui/react-ai-sdk'
+import { SendIcon, SparklesIcon, Trash2Icon } from 'lucide-react'
 
+import { PageHeader } from '@/components/showcase'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,38 +18,45 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
 
 const STORAGE_KEY = 'mocci:ai-agent-system-prompt'
+const TEMPERATURE_STORAGE_KEY = 'mocci:ai-agent-temperature'
+const DEFAULT_TEMPERATURE = 0.7
 
 type PromptStatus = 'not-saved' | 'saved' | 'unsaved'
 
-type PlaygroundMessage = {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-}
-
 const defaultPromptPlaceholder = `You are a CRM assistant for WhatsApp conversations. Help qualify leads, draft follow-ups, and respond in a concise professional tone. Ask clarifying questions when customer intent is unclear.`
-
-const initialMessages: PlaygroundMessage[] = [
-  {
-    id: 'assistant-welcome',
-    role: 'assistant',
-    content: 'System prompt saved. Send a CRM scenario and I will respond using your instructions.'
-  }
-]
 
 function getStoredPrompt() {
   if (typeof window === 'undefined') return ''
   return window.localStorage.getItem(STORAGE_KEY) ?? ''
 }
 
-function getPromptStatus(draft: string, saved: string): PromptStatus {
+function getStoredTemperature() {
+  if (typeof window === 'undefined') return DEFAULT_TEMPERATURE
+
+  const storedTemperature = Number(window.localStorage.getItem(TEMPERATURE_STORAGE_KEY))
+  if (!Number.isFinite(storedTemperature)) return DEFAULT_TEMPERATURE
+
+  return clampTemperature(storedTemperature)
+}
+
+function clampTemperature(value: number) {
+  return Math.min(1, Math.max(0, value))
+}
+
+function formatTemperature(value: number) {
+  return clampTemperature(value).toFixed(1)
+}
+
+function getPromptStatus(draft: string, saved: string, draftTemperature: number, savedTemperature: number): PromptStatus {
   if (!saved.trim()) return 'not-saved'
-  if (draft !== saved) return 'unsaved'
+  if (draft !== saved || formatTemperature(draftTemperature) !== formatTemperature(savedTemperature)) return 'unsaved'
   return 'saved'
 }
 
@@ -99,79 +110,90 @@ function DisabledPlaygroundPreview() {
   )
 }
 
-function ActivePlayground({ savedPrompt }: { savedPrompt: string }) {
-  const [messages, setMessages] = useState<PlaygroundMessage[]>(initialMessages)
-  const [draft, setDraft] = useState('')
+function AssistantThread() {
+  return (
+    <ThreadPrimitive.Root className='flex h-full min-h-0 flex-col overflow-hidden'>
+      <ThreadPrimitive.Viewport className='relative h-[clamp(220px,calc(100svh-34rem),420px)] min-h-0 shrink-0 overflow-y-auto overscroll-contain rounded-lg border bg-muted/20 p-4 [scrollbar-gutter:stable]'>
+        <AuiIf condition={(state) => state.thread.isEmpty}>
+          <div className='flex h-full items-center justify-center text-center text-muted-foreground text-sm'>
+            System prompt saved. Send a CRM scenario and I will respond using your instructions.
+          </div>
+        </AuiIf>
 
+        <div className='space-y-4'>
+          <ThreadPrimitive.Messages>
+            {({ message }) => (message.role === 'user' ? <UserMessage /> : <AssistantMessage />)}
+          </ThreadPrimitive.Messages>
+        </div>
+      </ThreadPrimitive.Viewport>
+
+      <ThreadPrimitive.ViewportFooter className='mt-4 shrink-0'>
+        <ComposerPrimitive.Root className='group flex items-end gap-2 rounded-2xl border bg-card/80 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20'>
+          <ComposerPrimitive.Input
+            rows={1}
+            autoFocus
+            placeholder='Test a CRM message, objection, or follow-up scenario...'
+            className='max-h-32 min-h-10 flex-1 resize-none bg-transparent px-3 py-2.5 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50'
+          />
+          <ComposerPrimitive.Send asChild>
+            <Button size='icon' className='size-10 shrink-0 rounded-xl' aria-label='Send message'>
+              <SendIcon className='size-4' />
+            </Button>
+          </ComposerPrimitive.Send>
+        </ComposerPrimitive.Root>
+      </ThreadPrimitive.ViewportFooter>
+    </ThreadPrimitive.Root>
+  )
+}
+
+function UserMessage() {
+  return (
+    <MessagePrimitive.Root className='flex justify-end'>
+      <div className='max-w-[80%] rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-primary-foreground text-sm'>
+        <MessagePrimitive.Parts />
+      </div>
+    </MessagePrimitive.Root>
+  )
+}
+
+function AssistantMessage() {
+  return (
+    <MessagePrimitive.Root className='flex justify-start'>
+      <div className='max-w-[80%] rounded-2xl rounded-tl-sm bg-muted px-4 py-3 text-foreground text-sm'>
+        <MessagePrimitive.Parts />
+      </div>
+    </MessagePrimitive.Root>
+  )
+}
+
+function ActivePlayground({ savedPrompt, temperature }: { savedPrompt: string; temperature: number }) {
   const promptPreview = useMemo(() => {
     const value = savedPrompt.trim()
     return value.length > 140 ? `${value.slice(0, 140)}...` : value
   }, [savedPrompt])
-
-  const sendMessage = () => {
-    const value = draft.trim()
-    if (!value) return
-
-    const userMessage: PlaygroundMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: value
-    }
-
-    const assistantMessage: PlaygroundMessage = {
-      id: `assistant-${Date.now()}`,
-      role: 'assistant',
-      content: `Using your saved system prompt, I would respond to: “${value}”`
-    }
-
-    setMessages((current) => [...current, userMessage, assistantMessage])
-    setDraft('')
-  }
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: '/api/ai-agent-playground',
+        body: { systemPrompt: savedPrompt, temperature }
+      }),
+    [savedPrompt, temperature]
+  )
+  const runtime = useChatRuntime({ transport })
 
   return (
     <div className='flex h-full min-h-0 flex-col overflow-hidden'>
       <Alert className='mb-4 shrink-0'>
         <SparklesIcon className='size-4' />
         <AlertTitle>Saved system prompt in use</AlertTitle>
-        <AlertDescription className='line-clamp-2'>{promptPreview}</AlertDescription>
+        <AlertDescription className='line-clamp-2'>
+          {promptPreview} · Temperature {formatTemperature(temperature)}
+        </AlertDescription>
       </Alert>
 
-      <div className='relative h-[clamp(220px,calc(100svh-34rem),420px)] min-h-0 shrink-0 overflow-y-auto overscroll-contain rounded-lg border bg-muted/20 p-4 [scrollbar-gutter:stable]'>
-        <div className='space-y-4'>
-          {messages.map((message) => (
-            <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
-                  message.role === 'user'
-                    ? 'rounded-tr-sm bg-primary text-primary-foreground'
-                    : 'rounded-tl-sm bg-muted text-foreground'
-                }`}
-              >
-                {message.content}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className='mt-5 flex shrink-0 gap-3'>
-        <Textarea
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault()
-              sendMessage()
-            }
-          }}
-          rows={2}
-          placeholder='Test a CRM message, objection, or follow-up scenario...'
-          className='min-h-11 resize-none'
-        />
-        <Button size='icon' className='size-11 shrink-0' onClick={sendMessage} disabled={!draft.trim()} aria-label='Send message'>
-          <SendIcon className='size-4' />
-        </Button>
-      </div>
+      <AssistantRuntimeProvider runtime={runtime}>
+        <AssistantThread />
+      </AssistantRuntimeProvider>
     </div>
   )
 }
@@ -179,46 +201,48 @@ function ActivePlayground({ savedPrompt }: { savedPrompt: string }) {
 export default function CrmAiAgentPage() {
   const [draftPrompt, setDraftPrompt] = useState('')
   const [savedPrompt, setSavedPrompt] = useState('')
+  const [draftTemperature, setDraftTemperature] = useState(DEFAULT_TEMPERATURE)
+  const [savedTemperature, setSavedTemperature] = useState(DEFAULT_TEMPERATURE)
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       const storedPrompt = getStoredPrompt()
+      const storedTemperature = getStoredTemperature()
       setDraftPrompt(storedPrompt)
       setSavedPrompt(storedPrompt)
+      setDraftTemperature(storedTemperature)
+      setSavedTemperature(storedTemperature)
     }, 0)
 
     return () => window.clearTimeout(timeoutId)
   }, [])
 
-  const status = getPromptStatus(draftPrompt, savedPrompt)
+  const status = getPromptStatus(draftPrompt, savedPrompt, draftTemperature, savedTemperature)
   const hasSavedPrompt = Boolean(savedPrompt.trim())
 
   const savePrompt = () => {
     const value = draftPrompt.trim()
+    const temperature = clampTemperature(draftTemperature)
     window.localStorage.setItem(STORAGE_KEY, value)
+    window.localStorage.setItem(TEMPERATURE_STORAGE_KEY, formatTemperature(temperature))
     setDraftPrompt(value)
     setSavedPrompt(value)
+    setDraftTemperature(temperature)
+    setSavedTemperature(temperature)
   }
 
   const clearPrompt = () => {
     window.localStorage.removeItem(STORAGE_KEY)
+    window.localStorage.removeItem(TEMPERATURE_STORAGE_KEY)
     setDraftPrompt('')
     setSavedPrompt('')
+    setDraftTemperature(DEFAULT_TEMPERATURE)
+    setSavedTemperature(DEFAULT_TEMPERATURE)
   }
 
   return (
-    <div className='flex min-h-0 flex-col gap-6 p-6'>
-      <div className='space-y-2'>
-        <div className='flex items-center gap-2'>
-          <div className='flex size-9 items-center justify-center rounded-lg border bg-muted'>
-            <BotIcon className='size-4' />
-          </div>
-          <div>
-            <h1 className='font-semibold text-3xl tracking-tight'>AI Agent Playground</h1>
-            <p className='text-muted-foreground text-sm'>Configure the system prompt, then test the assistant.</p>
-          </div>
-        </div>
-      </div>
+    <div className='space-y-6'>
+      <PageHeader title='AI Agent Playground' description='Configure the system prompt, then test the assistant.' />
 
       <Card className='min-h-0 overflow-hidden p-0'>
         <ResizablePanelGroup direction='horizontal' className='h-[calc(100svh-23rem)] min-h-[360px] flex-col md:flex-row'>
@@ -248,6 +272,39 @@ export default function CrmAiAgentPage() {
                     The playground uses the last saved prompt. Save again after editing to update assistant behavior.
                   </p>
                 </div>
+
+                <div className='space-y-3 rounded-lg border bg-muted/20 p-4'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='agent-temperature'>Temperature</Label>
+                    <p className='text-muted-foreground text-xs'>
+                      Controls response variation. Use lower values for consistent CRM replies.
+                    </p>
+                  </div>
+                  <div className='flex items-center gap-3'>
+                    <Slider
+                      value={[draftTemperature]}
+                      min={0}
+                      max={1}
+                      step={0.1}
+                      onValueChange={(value) => setDraftTemperature(clampTemperature(value[0] ?? DEFAULT_TEMPERATURE))}
+                      aria-label='AI temperature'
+                    />
+                    <Input
+                      id='agent-temperature'
+                      type='number'
+                      min={0}
+                      max={1}
+                      step={0.1}
+                      value={formatTemperature(draftTemperature)}
+                      onChange={(event) => {
+                        const value = Number(event.target.value)
+                        setDraftTemperature(Number.isFinite(value) ? clampTemperature(value) : DEFAULT_TEMPERATURE)
+                      }}
+                      className='w-20 text-center'
+                      aria-label='AI temperature value'
+                    />
+                  </div>
+                </div>
               </CardContent>
               <CardFooter className='shrink-0 justify-between gap-3 border-t bg-card/95 px-7 py-5'>
                 <Button variant='outline' type='button' onClick={clearPrompt} disabled={!draftPrompt && !savedPrompt}>
@@ -273,7 +330,11 @@ export default function CrmAiAgentPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className='min-h-0 flex-1 overflow-hidden px-7 pt-0 pb-6'>
-                {hasSavedPrompt ? <ActivePlayground savedPrompt={savedPrompt} /> : <DisabledPlaygroundPreview />}
+                {hasSavedPrompt ? (
+                  <ActivePlayground savedPrompt={savedPrompt} temperature={savedTemperature} />
+                ) : (
+                  <DisabledPlaygroundPreview />
+                )}
               </CardContent>
             </div>
           </ResizablePanel>

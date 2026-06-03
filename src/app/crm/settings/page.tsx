@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/showcase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,12 +19,9 @@ export default async function CrmSettingsPage() {
   const connectionState = settings?.connectionState ?? "Not tested";
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="font-semibold text-3xl tracking-tight">CRM Settings</h1>
-        <p className="text-muted-foreground">Store API credentials encrypted. Full secrets are never rendered back to the browser.</p>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+    <div className="space-y-6">
+      <PageHeader title="API Settings" description="Store API credentials encrypted. Full secrets are never rendered back to the browser." />
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Evolution API</CardTitle>

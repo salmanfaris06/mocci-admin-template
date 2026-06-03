@@ -25,6 +25,16 @@ npm run lint
 - Prefer server components by default; add `"use client"` only for browser state/effects/events.
 - Preserve accessibility attributes and keyboard behavior from Radix/Base UI primitives.
 
+## CRM Page Layout Rules
+- CRM pages must share the same page rhythm as `/dashboard`, `/inbox`, `/contacts`, `/pipeline`, and `/analytics`.
+- Do not add route-level padding like `p-6` inside CRM page components; the app shell owns page padding.
+- Use a direct first child page header. Prefer `PageHeader` from `@/components/showcase` for title + description.
+- Use `className='space-y-6'` for standard CRM pages and `className='space-y-4'` only for dense chat/dashboard layouts that already follow existing examples.
+- When a page header has actions, use `flex flex-wrap items-center justify-between gap-3` with `PageHeader` as the left side, matching `/pipeline`.
+- Keep main content below the header in cards/grids with `gap-4`, `space-y-4`, or `space-y-6`; avoid one-off spacing unless the existing page pattern requires it.
+- Keep page headers text-only unless the reference page includes an action; do not add decorative icons to CRM page headers.
+- Constrain chat/workspace panels inside their card and make inner lists scrollable instead of letting the page grow horizontally or vertically.
+
 ## Security & Secrets
 - Never commit secrets, tokens, private keys, or local `.env*` values.
 - Only expose browser-safe variables with a `NEXT_PUBLIC_` prefix.
