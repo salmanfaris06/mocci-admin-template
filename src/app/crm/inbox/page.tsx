@@ -1,10 +1,12 @@
-import { BotIcon, CheckCircle2Icon, ClockIcon, MessageCircleIcon, PhoneIcon, SendIcon } from "lucide-react";
+import { BotIcon, MessageCircleIcon, PhoneIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChatComposer, ChatMessages, ChatProvider, type ChatMessageData } from "@/components/ui/chat";
+import type { ChatMessageData } from "@/components/ui/chat";
 import { cn } from "@/lib/utils";
 import { getConversationMessages, getRecentConversations } from "@/server/crm/queries";
+
+import { CrmChatThread } from "./crm-chat-thread";
 
 export const dynamic = "force-dynamic";
 
@@ -135,49 +137,15 @@ export default async function CrmInboxPage() {
 
           <section className="flex min-h-[720px] flex-col bg-background">
             {activeConversation ? (
-              <ChatProvider className="flex min-h-[720px] flex-1 flex-col bg-background" currentUser={crmUser} theme="lunar">
-                <header className="flex flex-col gap-4 border-border border-b p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
-                      {(activeConversation.contactName ?? activeConversation.remoteJid).slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="truncate font-semibold text-lg">{activeConversation.contactName ?? activeConversation.remoteJid}</h2>
-                      <p className="truncate text-muted-foreground text-sm">{activeConversation.remoteJid}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant={statusVariant(activeConversation.status)}>
-                      <ClockIcon className="size-3" />
-                      {activeConversation.status}
-                    </Badge>
-                    <Badge variant={statusVariant(activeConversation.aiStatus)}>
-                      <CheckCircle2Icon className="size-3" />
-                      AI {activeConversation.aiStatus}
-                    </Badge>
-                  </div>
-                </header>
-
-                {chatMessages.length > 0 ? (
-                  <ChatMessages className="min-h-0 flex-1" messages={chatMessages} />
-                ) : (
-                  <div className="flex flex-1 items-center justify-center p-8 text-center">
-                    <div>
-                      <MessageCircleIcon className="mx-auto mb-3 size-10 text-muted-foreground" />
-                      <h3 className="font-medium">No messages in this thread</h3>
-                      <p className="mt-1 text-muted-foreground text-sm">Messages will appear here once this conversation has WhatsApp activity.</p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-border border-t p-4">
-                  <ChatComposer disabled placeholder="Preview only — sending is not connected yet" />
-                  <p className="mt-3 flex items-center gap-2 text-muted-foreground text-xs">
-                    <SendIcon className="size-3" />
-                    Sending is preview-only in demo mode. Connect Evolution API actions to send real WhatsApp replies.
-                  </p>
-                </div>
-              </ChatProvider>
+              <CrmChatThread
+                aiStatus={activeConversation.aiStatus}
+                aiStatusVariant={statusVariant(activeConversation.aiStatus)}
+                contactName={activeConversation.contactName ?? activeConversation.remoteJid}
+                initialMessages={chatMessages}
+                remoteJid={activeConversation.remoteJid}
+                status={activeConversation.status}
+                statusVariant={statusVariant(activeConversation.status)}
+              />
             ) : (
               <div className="flex flex-1 items-center justify-center p-8 text-center">
                 <div>
