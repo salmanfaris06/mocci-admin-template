@@ -22,8 +22,8 @@ export function AppShell({ sidebar, header, footer, children, defaultSidebarOpen
             <div className='flex w-full items-center justify-between gap-4 px-4 py-2 sm:px-6 lg:px-8'>{header}</div>
           </header>
         ) : null}
-        <main className='flex-1 px-4 py-6 sm:px-6 lg:px-8'>
-          <div className='mx-auto w-full max-w-screen-2xl'>{children}</div>
+        <main className='min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8'>
+          <div className='mx-auto min-w-0 w-full max-w-screen-2xl overflow-x-hidden'>{children}</div>
         </main>
         {footer ? <footer className='border-t'>{footer}</footer> : null}
       </SidebarInset>

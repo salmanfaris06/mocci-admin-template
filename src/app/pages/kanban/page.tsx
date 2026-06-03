@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import {
   DndContext,
@@ -11,24 +12,22 @@ import {
   useSensor,
   useSensors
 } from '@dnd-kit/core'
-import { SortableContext, arrayMove } from '@dnd-kit/sortable'
+import { arrayMove } from '@dnd-kit/sortable'
 import { PlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/showcase'
+import { Button } from '@/components/ui/button'
 
 import { ColumnContainer } from './column'
-import { type Task, initialColumns, initialTasks } from './data'
-import { TaskCard } from './task-card'
-import { TaskDetailSheet } from './task-detail-sheet'
+import { ContactCard } from './contact-card'
+import { type ContactLead, initialContacts, initialStages } from './data'
 
 export default function KanbanPage() {
-  const [columns] = useState(initialColumns)
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
-  const [activeTask, setActiveTask] = useState<Task | null>(null)
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
+  const router = useRouter()
+  const [stages] = useState(initialStages)
+  const [contacts, setContacts] = useState<ContactLead[]>(initialContacts)
+  const [activeContact, setActiveContact] = useState<ContactLead | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -36,16 +35,14 @@ export default function KanbanPage() {
     })
   )
 
-  const columnIds = useMemo(() => columns.map((c) => c.id), [columns])
-
   const onDragStart = (event: DragStartEvent) => {
-    if (event.active.data.current?.type === 'task') {
-      setActiveTask(event.active.data.current.task as Task)
+    if (event.active.data.current?.type === 'contact') {
+      setActiveContact(event.active.data.current.contact as ContactLead)
     }
   }
 
   const onDragEnd = (event: DragEndEvent) => {
-    setActiveTask(null)
+    setActiveContact(null)
     const { active, over } = event
     if (!over) return
 
@@ -53,94 +50,73 @@ export default function KanbanPage() {
     const overId = over.id as string
     if (activeId === overId) return
 
-    setTasks((current) => {
-      const activeIndex = current.findIndex((t) => t.id === activeId)
+    setContacts((current) => {
+      const activeIndex = current.findIndex((contact) => contact.id === activeId)
       if (activeIndex === -1) return current
 
-      const overColumn = columns.find((c) => c.id === overId)
-      if (overColumn) {
+      const overStage = stages.find((stage) => stage.id === overId)
+      if (overStage) {
         const updated = [...current]
-        updated[activeIndex] = { ...updated[activeIndex], columnId: overColumn.id }
+        updated[activeIndex] = { ...updated[activeIndex], stageId: overStage.id }
         return updated
       }
 
-      const overIndex = current.findIndex((t) => t.id === overId)
+      const overIndex = current.findIndex((contact) => contact.id === overId)
       if (overIndex === -1) return current
 
       const updated = [...current]
-      if (updated[activeIndex].columnId !== updated[overIndex].columnId) {
-        updated[activeIndex] = { ...updated[activeIndex], columnId: updated[overIndex].columnId }
+      if (updated[activeIndex].stageId !== updated[overIndex].stageId) {
+        updated[activeIndex] = { ...updated[activeIndex], stageId: updated[overIndex].stageId }
       }
       return arrayMove(updated, activeIndex, overIndex)
     })
   }
 
-  const handleTaskClick = (task: Task) => {
-    setSelectedTask(task)
-    setDetailOpen(true)
+  const handleContactClick = (contact: ContactLead) => {
+    router.push(contact.conversationId ? `/inbox?conversation=${contact.conversationId}` : '/inbox')
   }
 
-  const handleSaveTask = (updated: Task) => {
-    setTasks((current) => current.map((t) => (t.id === updated.id ? updated : t)))
-  }
-
-  const handleDeleteTask = (id: string) => {
-    setTasks((current) => current.filter((t) => t.id !== id))
-  }
-
-  const handleAddTask = (columnId: string) => {
-    const newTask: Task = {
-      id: `t-${Date.now()}`,
-      columnId,
-      title: 'New task',
-      description: '',
-      priority: 'medium',
-      tags: [],
-      comments: 0,
-      attachments: 0,
-      assignees: []
+  const handleAddContact = (stageId = stages[0].id) => {
+    const newContact: ContactLead = {
+      id: `contact-${Date.now()}`,
+      stageId,
+      name: 'New WhatsApp Contact',
+      whatsappNumber: '+62 800-0000-0000',
+      lastMessage: 'Add the latest message from this contact.'
     }
-    setTasks((current) => [...current, newTask])
-    setSelectedTask(newTask)
-    setDetailOpen(true)
-    toast.success('Task created', { description: 'Click to edit details' })
+
+    setContacts((current) => [newContact, ...current])
+    toast.success('Contact added', { description: 'Mock contact created locally.' })
   }
 
   return (
     <div className='space-y-6'>
       <div className='flex flex-wrap items-center justify-between gap-3'>
-        <PageHeader title='Kanban Board' description='Drag tasks across columns. Click any card for details.' />
-        <Button size='sm' className='h-8' onClick={() => handleAddTask(columns[0].id)}>
-          <PlusIcon className='size-3.5' /> Add task
+        <PageHeader title='Pipeline' description='Track WhatsApp contacts across your CRM stages.' />
+        <Button size='sm' className='h-8' onClick={() => handleAddContact()}>
+          <PlusIcon className='size-3.5' /> Add contact
         </Button>
       </div>
 
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-          <SortableContext items={columnIds}>
-            {columns.map((column) => (
-              <ColumnContainer
-                key={column.id}
-                column={column}
-                tasks={tasks.filter((t) => t.columnId === column.id)}
-                onTaskClick={handleTaskClick}
-                onAddTask={() => handleAddTask(column.id)}
-              />
-            ))}
-          </SortableContext>
+          {stages.map((stage) => (
+            <ColumnContainer
+              key={stage.id}
+              stage={stage}
+              contacts={contacts.filter((contact) => contact.stageId === stage.id)}
+              onContactClick={handleContactClick}
+              onAddContact={() => handleAddContact(stage.id)}
+            />
+          ))}
         </div>
 
-        <DragOverlay>{activeTask ? <TaskCard task={activeTask} isOverlay /> : null}</DragOverlay>
+        <DragOverlay>{activeContact ? <ContactCard contact={activeContact} isOverlay /> : null}</DragOverlay>
       </DndContext>
 
-      <TaskDetailSheet
-        task={selectedTask}
-        columns={columns}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        onSave={handleSaveTask}
-        onDelete={handleDeleteTask}
-      />
+      <p className='text-muted-foreground text-xs'>
+        This pipeline uses mock data. Drag contacts between stages or click a card to open the inbox.
+      </p>
     </div>
   )
 }

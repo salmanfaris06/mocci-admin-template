@@ -1,0 +1,72 @@
+<h2>Pipeline Kanban Contact: pilih gaya layout</h2>
+<p class="subtitle">Semua opsi memakai kolom status lead, dan setiap card berisi nama + nomor WhatsApp.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px; background:#0b0b0c; border-radius:12px; min-height:260px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div>
+          <div style="font-size:20px; font-weight:700; color:#fff;">Pipeline</div>
+          <div style="font-size:12px; color:#9ca3af;">Track WhatsApp leads by stage</div>
+        </div>
+        <div style="background:#fff; color:#111; border-radius:8px; padding:7px 10px; font-size:12px; font-weight:600;">+ Add Contact</div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;">
+          <div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">New Lead · 3</div>
+          <div style="background:#202024; border-radius:9px; padding:10px; margin-bottom:8px;"><b style="color:#fff; font-size:13px;">Sarah Davis</b><br><span style="color:#9ca3af; font-size:11px;">+62 812-4455-901</span></div>
+          <div style="background:#202024; border-radius:9px; padding:10px;"><b style="color:#fff; font-size:13px;">Budi Santoso</b><br><span style="color:#9ca3af; font-size:11px;">+62 857-9981-224</span></div>
+        </div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">Contacted · 2</div><div style="background:#202024; border-radius:9px; padding:10px;"><b style="color:#fff; font-size:13px;">Emma Chen</b><br><span style="color:#9ca3af; font-size:11px;">+62 878-5510-112</span></div></div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">Follow Up · 2</div><div style="background:#202024; border-radius:9px; padding:10px;"><b style="color:#fff; font-size:13px;">Olivia Park</b><br><span style="color:#9ca3af; font-size:11px;">+62 811-4000-733</span></div></div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">Converted · 1</div><div style="background:#202024; border-radius:9px; padding:10px;"><b style="color:#fff; font-size:13px;">Robert Fox</b><br><span style="color:#9ca3af; font-size:11px;">+62 813-7762-020</span></div></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Simple CRM Kanban</h3>
+      <p>Clean dan paling cepat dibuat. Fokus ke drag-and-drop contact antar stage.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px; background:#0b0b0c; border-radius:12px; min-height:260px;">
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px;">
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="color:#9ca3af; font-size:11px;">Total Leads</div><div style="color:#fff; font-size:20px; font-weight:800;">24</div></div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="color:#9ca3af; font-size:11px;">Need Follow Up</div><div style="color:#fff; font-size:20px; font-weight:800;">8</div></div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="color:#9ca3af; font-size:11px;">Won</div><div style="color:#fff; font-size:20px; font-weight:800;">5</div></div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="color:#9ca3af; font-size:11px;">WA Sent</div><div style="color:#fff; font-size:20px; font-weight:800;">42</div></div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">New Lead</div><div style="background:#202024; border-radius:9px; padding:10px;"><b style="color:#fff; font-size:13px;">Sarah Davis</b><br><span style="color:#9ca3af; font-size:11px;">+62 812-4455-901</span><br><span style="color:#22c55e; font-size:11px;">WhatsApp ready</span></div></div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">Contacted</div></div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">Follow Up</div></div>
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">Converted</div></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Pipeline + Stats</h3>
+      <p>Lebih dashboard-like. Cocok kalau pipeline nanti dipakai untuk monitoring performa follow-up.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px; background:#0b0b0c; border-radius:12px; min-height:260px;">
+      <div style="display:grid; grid-template-columns:260px 1fr; gap:12px;">
+        <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;">
+          <div style="color:#fff; font-weight:700; font-size:14px; margin-bottom:10px;">Contacts</div>
+          <div style="background:#202024; border-radius:9px; padding:10px; margin-bottom:8px;"><b style="color:#fff; font-size:13px;">Sarah Davis</b><br><span style="color:#9ca3af; font-size:11px;">+62 812-4455-901</span></div>
+          <div style="background:#202024; border-radius:9px; padding:10px;"><b style="color:#fff; font-size:13px;">Emma Chen</b><br><span style="color:#9ca3af; font-size:11px;">+62 878-5510-112</span></div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+          <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">New</div></div>
+          <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">Follow Up</div></div>
+          <div style="background:#151518; border:1px solid #26262b; border-radius:10px; padding:10px;"><div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:8px;">Won</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Contact Sidebar + Pipeline</h3>
+      <p>Bagus untuk banyak kontak, tapi lebih kompleks dan terasa seperti dua halaman digabung.</p>
+    </div>
+  </div>
+</div>

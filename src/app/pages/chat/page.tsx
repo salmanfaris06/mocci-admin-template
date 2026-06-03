@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   ArrowLeftIcon,
   PaperclipIcon,
@@ -26,10 +27,16 @@ import {
   participants
 } from './data'
 
-export default function ChatPage() {
+function ChatContent() {
+  const searchParams = useSearchParams()
   const [conversations] = useState(initialConversations)
   const [messages, setMessages] = useState<Message[]>(initialMessages)
-  const [activeId, setActiveId] = useState<string>(conversations[0]?.id ?? '')
+  const initialConversationId = searchParams.get('conversation')
+  const [activeId, setActiveId] = useState<string>(
+    conversations.some((conversation) => conversation.id === initialConversationId)
+      ? (initialConversationId ?? '')
+      : (conversations[0]?.id ?? '')
+  )
   const [search, setSearch] = useState('')
   const [draft, setDraft] = useState('')
 
@@ -225,5 +232,13 @@ export default function ChatPage() {
         </div>
       </Card>
     </div>
+  )
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatContent />
+    </Suspense>
   )
 }

@@ -1,130 +1,85 @@
-import { avatarSrc } from '@/lib/assets'
+export type ContactStage = {
+  id: string
+  title: string
+}
 
-export type Priority = 'low' | 'medium' | 'high'
-
-export type Assignee = {
+export type ContactLead = {
+  id: string
+  stageId: string
   name: string
-  avatar: string
-  fallback: string
+  whatsappNumber: string
+  lastMessage: string
+  conversationId?: string
 }
 
-export type Task = {
-  id: string
-  columnId: string
-  title: string
-  description?: string
-  priority: Priority
-  tags: string[]
-  comments: number
-  attachments: number
-  assignees: Assignee[]
-  dueDate?: string
-}
-
-export type Column = {
-  id: string
-  title: string
-  color: string
-}
-
-export const priorityStyles: Record<Priority, string> = {
-  low: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  medium: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  high: 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-}
-
-const avatar = (n: number, fallback: string): Assignee => ({
-  name: fallback,
-  fallback,
-  avatar: avatarSrc(n)
-})
-
-export const initialColumns: Column[] = [
-  { id: 'todo', title: 'To Do', color: 'bg-slate-500' },
-  { id: 'progress', title: 'In Progress', color: 'bg-blue-500' },
-  { id: 'review', title: 'In Review', color: 'bg-violet-500' },
-  { id: 'done', title: 'Done', color: 'bg-emerald-500' }
+export const initialStages: ContactStage[] = [
+  { id: 'new-lead', title: 'New Lead' },
+  { id: 'contacted', title: 'Contacted' },
+  { id: 'follow-up', title: 'Follow Up' },
+  { id: 'converted', title: 'Converted' }
 ]
 
-export const initialTasks: Task[] = [
+export const initialContacts: ContactLead[] = [
   {
-    id: 't1',
-    columnId: 'todo',
-    title: 'Design new onboarding flow',
-    description: 'Update the welcome screens with new branding and improve the first-time user experience.',
-    priority: 'high',
-    tags: ['Design', 'Onboarding'],
-    comments: 4,
-    attachments: 2,
-    assignees: [avatar(1, 'JD'), avatar(2, 'SM')],
-    dueDate: 'May 30, 2025'
+    id: 'contact-1',
+    stageId: 'new-lead',
+    name: 'Sarah Davis',
+    whatsappNumber: '+62 812-4455-901',
+    lastMessage: 'Wanna jump on a call?',
+    conversationId: 'c1'
   },
   {
-    id: 't2',
-    columnId: 'todo',
-    title: 'Research competitor pricing',
-    description: 'Compare pricing tiers from top 5 competitors and prepare a recommendation deck.',
-    priority: 'low',
-    tags: ['Research'],
-    comments: 1,
-    attachments: 0,
-    assignees: [avatar(3, 'AL')],
-    dueDate: 'Jun 5, 2025'
+    id: 'contact-2',
+    stageId: 'new-lead',
+    name: 'Budi Santoso',
+    whatsappNumber: '+62 857-9981-224',
+    lastMessage: 'Saya tertarik dengan paket CRM untuk tim sales.'
   },
   {
-    id: 't3',
-    columnId: 'progress',
-    title: 'Implement OAuth integration',
-    description: 'Add Google and GitHub sign-in providers with proper error handling and token refresh.',
-    priority: 'high',
-    tags: ['Backend', 'Auth'],
-    comments: 8,
-    attachments: 1,
-    assignees: [avatar(4, 'MK'), avatar(5, 'RP'), avatar(6, 'CW')],
-    dueDate: 'May 28, 2025'
+    id: 'contact-3',
+    stageId: 'new-lead',
+    name: 'Nadia Putri',
+    whatsappNumber: '+62 813-2209-441',
+    lastMessage: 'Bisa kirim detail pricing-nya?'
   },
   {
-    id: 't4',
-    columnId: 'progress',
-    title: 'Refactor data table component',
-    description: 'Extract data table logic into a reusable component with full type safety.',
-    priority: 'medium',
-    tags: ['Frontend'],
-    comments: 3,
-    attachments: 0,
-    assignees: [avatar(7, 'EB')]
+    id: 'contact-4',
+    stageId: 'contacted',
+    name: 'Emma Chen',
+    whatsappNumber: '+62 878-5510-112',
+    lastMessage: 'Let me know if anything needs clarification.',
+    conversationId: 'c3'
   },
   {
-    id: 't5',
-    columnId: 'review',
-    title: 'Update billing API endpoints',
-    description: 'Migrate to the new Stripe API version and update webhook handlers.',
-    priority: 'medium',
-    tags: ['Backend', 'Billing'],
-    comments: 2,
-    attachments: 4,
-    assignees: [avatar(8, 'TH')],
-    dueDate: 'May 26, 2025'
+    id: 'contact-5',
+    stageId: 'contacted',
+    name: 'Cameron Williamson',
+    whatsappNumber: '+62 811-7399-020',
+    lastMessage: 'On it. I will review the proposal today.',
+    conversationId: 'c2'
   },
   {
-    id: 't6',
-    columnId: 'done',
-    title: 'Setup CI/CD pipeline',
-    description: 'Configure GitHub Actions for automated testing and deployment.',
-    priority: 'low',
-    tags: ['DevOps'],
-    comments: 5,
-    attachments: 0,
-    assignees: [avatar(9, 'NL'), avatar(10, 'OS')]
+    id: 'contact-6',
+    stageId: 'follow-up',
+    name: 'Olivia Park',
+    whatsappNumber: '+62 811-4000-733',
+    lastMessage: 'User interviews scheduled for next week.',
+    conversationId: 'c5'
   },
   {
-    id: 't7',
-    columnId: 'done',
-    title: 'Write project documentation',
-    priority: 'low',
-    tags: ['Docs'],
-    comments: 2,
-    attachments: 1,
-    assignees: [avatar(11, 'RM')]
+    id: 'contact-7',
+    stageId: 'follow-up',
+    name: 'Marcus Johnson',
+    whatsappNumber: '+62 821-6332-808',
+    lastMessage: 'Awesome, thanks for handling this.',
+    conversationId: 'c4'
+  },
+  {
+    id: 'contact-8',
+    stageId: 'converted',
+    name: 'Robert Fox',
+    whatsappNumber: '+62 813-7762-020',
+    lastMessage: 'CI pipeline upgraded to v3, builds are stable.',
+    conversationId: 'c6'
   }
 ]

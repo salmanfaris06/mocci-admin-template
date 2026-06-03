@@ -37,7 +37,7 @@ export async function sendManualWhatsAppMessage(input: z.infer<typeof sendManual
     .set({ lastMessageAt: sentAt, lastMessageSummary: values.text, updatedAt: sentAt })
     .where(eq(conversations.id, values.conversationId));
 
-  revalidatePath("/crm/inbox");
+  revalidatePath("/inbox");
 
   return { sentAt };
 }

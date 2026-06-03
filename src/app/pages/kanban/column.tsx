@@ -1,66 +1,63 @@
-'use client'
-
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { PlusIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/card'
 
-import { type Column, type Task } from './data'
-import { TaskCard } from './task-card'
+import { ContactCard } from './contact-card'
+import type { ContactLead, ContactStage } from './data'
 
 type ColumnContainerProps = {
-  column: Column
-  tasks: Task[]
-  onTaskClick: (task: Task) => void
-  onAddTask: () => void
+  stage: ContactStage
+  contacts: ContactLead[]
+  onContactClick: (contact: ContactLead) => void
+  onAddContact: () => void
 }
 
-export function ColumnContainer({ column, tasks, onTaskClick, onAddTask }: ColumnContainerProps) {
-  const { setNodeRef, transform, transition, isDragging } = useSortable({
-    id: column.id,
-    data: { type: 'column', column }
+export function ColumnContainer({
+  stage,
+  contacts,
+  onContactClick,
+  onAddContact
+}: ColumnContainerProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: stage.id,
+    data: { type: 'stage', stage }
   })
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition
-  }
-
-  const taskIds = tasks.map((t) => t.id)
-
   return (
-    <div
+    <Card
       ref={setNodeRef}
-      style={style}
-      className={cn('flex flex-col gap-3', isDragging && 'opacity-50')}
+      className={`flex min-h-[520px] flex-col gap-3 rounded-xl border-dashed p-3 transition-colors ${
+        isOver ? 'border-primary/60 bg-primary/5' : ''
+      }`}
     >
-      <div className='flex items-center justify-between px-1'>
-        <div className='flex items-center gap-2'>
-          <span className={cn('size-2 rounded-full', column.color)} aria-hidden />
-          <h2 className='text-sm font-semibold'>{column.title}</h2>
-          <span className='text-muted-foreground text-xs'>{tasks.length}</span>
+      <div className='flex items-center justify-between gap-2'>
+        <div>
+          <h2 className='font-medium text-sm'>{stage.title}</h2>
+          <p className='text-muted-foreground text-xs'>
+            {contacts.length} {contacts.length === 1 ? 'contact' : 'contacts'}
+          </p>
         </div>
-        <Button variant='ghost' size='icon' className='size-6' aria-label='Add task' onClick={onAddTask}>
+        <Button
+          variant='ghost'
+          size='icon'
+          className='size-7'
+          onClick={onAddContact}
+          aria-label={`Add contact to ${stage.title}`}
+        >
           <PlusIcon className='size-3.5' />
         </Button>
       </div>
 
-      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-        <div className='bg-muted/30 flex min-h-32 flex-col gap-2 rounded-lg p-2'>
-          {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} />
+      <SortableContext items={contacts.map((contact) => contact.id)} strategy={verticalListSortingStrategy}>
+        <div className='flex flex-1 flex-col gap-3'>
+          {contacts.map((contact) => (
+            <ContactCard key={contact.id} contact={contact} onClick={() => onContactClick(contact)} />
           ))}
-          {tasks.length === 0 ? (
-            <p className='text-muted-foreground py-6 text-center text-xs'>Drop tasks here</p>
-          ) : null}
         </div>
       </SortableContext>
-
-      <Button variant='ghost' size='sm' className='text-muted-foreground w-full justify-start text-xs' onClick={onAddTask}>
-        <PlusIcon className='size-3.5' /> Add task
-      </Button>
-    </div>
+    </Card>
   )
 }

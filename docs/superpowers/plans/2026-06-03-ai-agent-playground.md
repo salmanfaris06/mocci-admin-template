@@ -1,3 +1,36 @@
+# AI Agent Playground Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Redesign `/ai-agent` into a two-column prompt setup and assistant playground page using shadcn/ui components, with localStorage prompt persistence and a disabled chat preview before save.
+
+**Architecture:** Keep the page as a client component because it needs localStorage and interactive chat state. Split the UI into small local components inside `src/app/crm/ai-agent/page.tsx` for prompt setup, disabled preview, and active mock playground so the active chat can later be replaced with assistant-ui runtime integration.
+
+**Tech Stack:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS v4, shadcn/ui components, lucide-react icons, browser localStorage.
+
+---
+
+## File Structure
+
+- Modify: `src/app/crm/ai-agent/page.tsx`
+  - Replace the single-card textarea page with a two-column client-side prompt lab.
+  - Use shadcn/ui components only for page structure.
+  - Store prompt in `localStorage`.
+  - Show disabled chat preview until prompt is saved.
+  - Show an active local/mock playground after prompt is saved.
+
+---
+
+### Task 1: Replace AI Agent Page with Client Prompt Lab
+
+**Files:**
+- Modify: `src/app/crm/ai-agent/page.tsx`
+
+- [ ] **Step 1: Replace the entire page with the two-column implementation**
+
+Write this complete content to `src/app/crm/ai-agent/page.tsx`:
+
+```tsx
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -15,7 +48,8 @@ import {
   CardTitle
 } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 
 const STORAGE_KEY = 'mocci:ai-agent-system-prompt'
@@ -38,11 +72,6 @@ const initialMessages: PlaygroundMessage[] = [
   }
 ]
 
-function getStoredPrompt() {
-  if (typeof window === 'undefined') return ''
-  return window.localStorage.getItem(STORAGE_KEY) ?? ''
-}
-
 function getPromptStatus(draft: string, saved: string): PromptStatus {
   if (!saved.trim()) return 'not-saved'
   if (draft !== saved) return 'unsaved'
@@ -63,8 +92,8 @@ function PromptStatusBadge({ status }: { status: PromptStatus }) {
 
 function DisabledPlaygroundPreview() {
   return (
-    <div className='flex h-full min-h-0 flex-col overflow-hidden'>
-      <div className='relative h-[clamp(220px,calc(100svh-34rem),420px)] min-h-0 shrink-0 overflow-y-auto overscroll-contain rounded-lg border bg-muted/20 p-4 [scrollbar-gutter:stable]'>
+    <div className='flex min-h-[520px] flex-col'>
+      <ScrollArea className='flex-1 rounded-lg border bg-muted/20 p-4'>
         <div className='space-y-4'>
           <div className='flex justify-start'>
             <div className='max-w-[80%] rounded-2xl rounded-tl-sm bg-muted px-4 py-3 text-sm'>
@@ -82,9 +111,9 @@ function DisabledPlaygroundPreview() {
             </div>
           </div>
         </div>
-      </div>
+      </ScrollArea>
 
-      <div className='mt-5 flex shrink-0 gap-3'>
+      <div className='mt-4 flex gap-2'>
         <Textarea
           disabled
           rows={2}
@@ -129,14 +158,14 @@ function ActivePlayground({ savedPrompt }: { savedPrompt: string }) {
   }
 
   return (
-    <div className='flex h-full min-h-0 flex-col overflow-hidden'>
-      <Alert className='mb-4 shrink-0'>
+    <div className='flex min-h-[520px] flex-col'>
+      <Alert className='mb-4'>
         <SparklesIcon className='size-4' />
         <AlertTitle>Saved system prompt in use</AlertTitle>
         <AlertDescription className='line-clamp-2'>{promptPreview}</AlertDescription>
       </Alert>
 
-      <div className='relative h-[clamp(220px,calc(100svh-34rem),420px)] min-h-0 shrink-0 overflow-y-auto overscroll-contain rounded-lg border bg-muted/20 p-4 [scrollbar-gutter:stable]'>
+      <ScrollArea className='flex-1 rounded-lg border bg-muted/20 p-4'>
         <div className='space-y-4'>
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -152,9 +181,9 @@ function ActivePlayground({ savedPrompt }: { savedPrompt: string }) {
             </div>
           ))}
         </div>
-      </div>
+      </ScrollArea>
 
-      <div className='mt-5 flex shrink-0 gap-3'>
+      <div className='mt-4 flex gap-2'>
         <Textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -181,13 +210,9 @@ export default function CrmAiAgentPage() {
   const [savedPrompt, setSavedPrompt] = useState('')
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      const storedPrompt = getStoredPrompt()
-      setDraftPrompt(storedPrompt)
-      setSavedPrompt(storedPrompt)
-    }, 0)
-
-    return () => window.clearTimeout(timeoutId)
+    const stored = window.localStorage.getItem(STORAGE_KEY) ?? ''
+    setDraftPrompt(stored)
+    setSavedPrompt(stored)
   }, [])
 
   const status = getPromptStatus(draftPrompt, savedPrompt)
@@ -202,83 +227,4 @@ export default function CrmAiAgentPage() {
 
   const clearPrompt = () => {
     window.localStorage.removeItem(STORAGE_KEY)
-    setDraftPrompt('')
-    setSavedPrompt('')
-  }
-
-  return (
-    <div className='flex min-h-0 flex-col gap-6 p-6'>
-      <div className='space-y-2'>
-        <div className='flex items-center gap-2'>
-          <div className='flex size-9 items-center justify-center rounded-lg border bg-muted'>
-            <BotIcon className='size-4' />
-          </div>
-          <div>
-            <h1 className='font-semibold text-3xl tracking-tight'>AI Agent Playground</h1>
-            <p className='text-muted-foreground text-sm'>Configure the system prompt, then test the assistant.</p>
-          </div>
-        </div>
-      </div>
-
-      <Card className='min-h-0 overflow-hidden p-0'>
-        <ResizablePanelGroup direction='horizontal' className='h-[calc(100svh-23rem)] min-h-[360px] flex-col md:flex-row'>
-          <ResizablePanel defaultSize={34} minSize={30} className='min-w-0'>
-            <div className='flex h-full min-h-0 flex-col'>
-              <CardHeader className='shrink-0 space-y-3 px-7 pt-7 pb-4'>
-                <div className='flex items-start justify-between gap-3'>
-                  <div className='space-y-1'>
-                    <CardTitle>System Prompt</CardTitle>
-                    <CardDescription>Define how your CRM assistant should behave before testing it.</CardDescription>
-                  </div>
-                  <PromptStatusBadge status={status} />
-                </div>
-              </CardHeader>
-              <CardContent className='min-h-0 flex-1 space-y-5 overflow-y-auto px-7 py-4'>
-                <div className='flex min-h-0 flex-1 flex-col space-y-2'>
-                  <Label htmlFor='agent-system-prompt'>Instructions</Label>
-                  <Textarea
-                    id='agent-system-prompt'
-                    value={draftPrompt}
-                    onChange={(event) => setDraftPrompt(event.target.value)}
-                    placeholder={defaultPromptPlaceholder}
-                    rows={12}
-                    className='h-[260px] min-h-[220px] resize-none overflow-y-auto'
-                  />
-                  <p className='text-muted-foreground text-xs'>
-                    The playground uses the last saved prompt. Save again after editing to update assistant behavior.
-                  </p>
-                </div>
-              </CardContent>
-              <CardFooter className='shrink-0 justify-between gap-3 border-t bg-card/95 px-7 py-5'>
-                <Button variant='outline' type='button' onClick={clearPrompt} disabled={!draftPrompt && !savedPrompt}>
-                  <Trash2Icon className='size-4' /> Clear
-                </Button>
-                <Button type='button' onClick={savePrompt} disabled={!draftPrompt.trim() || status === 'saved'}>
-                  Save Prompt
-                </Button>
-              </CardFooter>
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={66} minSize={42} className='min-w-0'>
-            <div className='flex h-full min-h-0 flex-col'>
-              <CardHeader className='shrink-0 px-7 pt-7 pb-4'>
-                <CardTitle>Assistant Playground</CardTitle>
-                <CardDescription>
-                  {hasSavedPrompt
-                    ? 'Test your assistant with real CRM-style prompts.'
-                    : 'Save a system prompt to unlock testing.'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className='min-h-0 flex-1 overflow-hidden px-7 pt-0 pb-6'>
-                {hasSavedPrompt ? <ActivePlayground savedPrompt={savedPrompt} /> : <DisabledPlaygroundPreview />}
-              </CardContent>
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </Card>
-    </div>
-  )
-}
+    setDraftPrompt('

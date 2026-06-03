@@ -35,24 +35,24 @@ export async function saveEvolutionSettings(formData: FormData) {
   } else {
     await db.insert(apiSettings).values(values);
   }
-  revalidatePath("/crm/settings");
+  revalidatePath("/api-settings");
 }
 
 export async function testEvolutionSettings() {
   const state = await testEvolutionConnection();
-  revalidatePath("/crm/settings");
+  revalidatePath("/api-settings");
   return state;
 }
 
 export async function createWhatsAppInstance() {
   const response = await createEvolutionInstance();
-  revalidatePath("/crm/settings");
+  revalidatePath("/api-settings");
   return response;
 }
 
 export async function connectWhatsAppInstance() {
   const qr = await connectEvolutionInstance();
-  revalidatePath("/crm/settings");
+  revalidatePath("/api-settings");
   return qr;
 }
 
@@ -62,5 +62,5 @@ export async function saveOpenAiKey(formData: FormData) {
     target: aiProviderKeys.provider,
     set: { encryptedApiKey: encryptSecret(requiredString(formData, "openAiApiKey"), key), isActive: true, isDefault: true, updatedAt: new Date() },
   });
-  revalidatePath("/crm/settings");
+  revalidatePath("/api-settings");
 }
