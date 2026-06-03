@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createOptimisticMessage } from "./optimistic-chat";
+import { createOptimisticMessage, promoteConversationPreview } from "./optimistic-chat";
 
 describe("createOptimisticMessage", () => {
   it("creates a sent outbound demo message for the CRM agent", () => {
@@ -22,5 +22,26 @@ describe("createOptimisticMessage", () => {
       text: "Halo, kami bantu follow up ya.",
       timestamp: now,
     });
+  });
+});
+
+describe("promoteConversationPreview", () => {
+  it("promotes the updated conversation with the local message preview", () => {
+    const now = new Date("2026-06-03T01:00:00.000Z");
+    const conversations = [
+      { id: "a", lastMessageAt: new Date("2026-06-02T00:00:00.000Z"), lastMessageSummary: "old a" },
+      { id: "b", lastMessageAt: new Date("2026-06-02T01:00:00.000Z"), lastMessageSummary: "old b" },
+    ];
+
+    const updated = promoteConversationPreview(conversations, {
+      conversationId: "b",
+      lastMessageAt: now,
+      lastMessageSummary: "new local reply",
+    });
+
+    expect(updated).toEqual([
+      { id: "b", lastMessageAt: now, lastMessageSummary: "new local reply" },
+      { id: "a", lastMessageAt: new Date("2026-06-02T00:00:00.000Z"), lastMessageSummary: "old a" },
+    ]);
   });
 });

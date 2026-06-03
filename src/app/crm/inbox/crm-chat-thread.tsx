@@ -16,24 +16,28 @@ const crmUser = {
 type CrmChatThreadProps = {
   contactName: string;
   initialMessages: ChatMessageData[];
+  onLocalSend?: (text: string, sentAt: Date) => void;
   remoteJid: string;
 };
 
-export function CrmChatThread({ contactName, initialMessages, remoteJid }: CrmChatThreadProps) {
+export function CrmChatThread({ contactName, initialMessages, onLocalSend, remoteJid }: CrmChatThreadProps) {
   const [messages, setMessages] = React.useState(initialMessages);
 
   const handleSend = React.useCallback((text: string) => {
+    const sentAt = new Date();
+
     setMessages((currentMessages) => [
       ...currentMessages,
       createOptimisticMessage({
-        id: `local-${Date.now()}`,
-        now: new Date(),
+        id: `local-${sentAt.getTime()}`,
+        now: sentAt,
         senderId: crmUser.id,
         senderName: crmUser.name,
         text,
       }),
     ]);
-  }, []);
+    onLocalSend?.(text, sentAt);
+  }, [onLocalSend]);
 
   return (
     <ChatProvider className="flex min-h-[720px] flex-1 flex-col bg-background" currentUser={crmUser} theme="lunar">

@@ -18,3 +18,27 @@ export function createOptimisticMessage({ id, now, senderId, senderName, text }:
     timestamp: now,
   };
 }
+
+type ConversationPreview = {
+  id: string;
+  lastMessageAt: Date | null;
+  lastMessageSummary: string | null;
+};
+
+type PromoteConversationPreviewInput = {
+  conversationId: string;
+  lastMessageAt: Date;
+  lastMessageSummary: string;
+};
+
+export function promoteConversationPreview<TConversation extends ConversationPreview>(
+  conversations: TConversation[],
+  { conversationId, lastMessageAt, lastMessageSummary }: PromoteConversationPreviewInput,
+) {
+  const updatedConversation = conversations.find((conversation) => conversation.id === conversationId);
+  const otherConversations = conversations.filter((conversation) => conversation.id !== conversationId);
+
+  if (!updatedConversation) return conversations;
+
+  return [{ ...updatedConversation, lastMessageAt, lastMessageSummary }, ...otherConversations];
+}
