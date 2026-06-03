@@ -1143,6 +1143,8 @@ interface ChatComposerProps {
   replyingTo?: ChatMessageData | null
   onCancelReply?: () => void
   className?: string
+  composerBodyClassName?: string
+  inputContainerClassName?: string
 }
 
 function ChatComposer({
@@ -1155,6 +1157,8 @@ function ChatComposer({
   replyingTo,
   onCancelReply,
   className,
+  composerBodyClassName,
+  inputContainerClassName,
 }: ChatComposerProps) {
   const [value, setValue] = React.useState("")
   const [files, setFiles] = React.useState<FilePreviewItem[]>([])
@@ -1288,7 +1292,7 @@ function ChatComposer({
       )}
 
       {/* Composer body — frosted glass */}
-      <div className="border-t border-[var(--chat-border)] bg-[var(--chat-bg-composer)] px-3 py-2 backdrop-blur-[20px] backdrop-saturate-[180%]">
+      <div className={cn("border-t border-[var(--chat-border)] bg-[var(--chat-bg-composer)] px-3 py-2 backdrop-blur-[20px] backdrop-saturate-[180%]", composerBodyClassName)}>
         <div className="mx-auto max-w-3xl">
           {/* Input row */}
           <div className="flex items-end gap-2">
@@ -1337,7 +1341,7 @@ function ChatComposer({
             <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }} />
             <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }} />
 
-            <div className="relative flex flex-1 items-end rounded-[22px] border border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)]">
+            <div className={cn("relative flex flex-1 items-end rounded-[22px] border border-[var(--chat-border)] bg-[var(--chat-bg-sidebar)]", inputContainerClassName)}>
               <textarea
                 ref={textareaRef}
                 value={value}

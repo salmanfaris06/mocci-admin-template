@@ -77,7 +77,12 @@ export function CrmChatThread({ aiStatus, aiStatusVariant, contactName, initialM
       )}
 
       <div className="border-border border-t p-4">
-        <ChatComposer onSend={handleSend} placeholder="Type a demo reply — it will only appear locally" />
+        <ChatComposer
+          composerBodyClassName="border-t-0 bg-transparent px-0 py-0 backdrop-blur-none backdrop-saturate-100"
+          inputContainerClassName="bg-transparent"
+          onSend={handleSend}
+          placeholder="Type a demo reply — it will only appear locally"
+        />
         <p className="mt-3 flex items-center gap-2 text-muted-foreground text-xs">
           <SendIcon className="size-3" />
           Demo mode: replies appear locally in this preview only. Connect Evolution API actions to send real WhatsApp replies.
