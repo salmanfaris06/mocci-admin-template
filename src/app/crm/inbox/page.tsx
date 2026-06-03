@@ -1,4 +1,4 @@
-import { BotIcon, MessageCircleIcon, PhoneIcon } from "lucide-react";
+import { MessageCircleIcon, PhoneIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,12 +25,6 @@ function formatTime(value: Date | null) {
     minute: "2-digit",
     month: "short",
   }).format(value);
-}
-
-function statusVariant(status: string) {
-  if (status === "needs_attention" || status === "error" || status === "failed") return "destructive" as const;
-  if (status === "processing") return "secondary" as const;
-  return "outline" as const;
 }
 
 function getMessageText(message: Awaited<ReturnType<typeof getConversationMessages>>[number]) {
@@ -120,13 +114,6 @@ export default async function CrmInboxPage() {
                           <span className="shrink-0 text-muted-foreground text-[11px]">{formatTime(conversation.lastMessageAt)}</span>
                         </div>
                         <p className="mt-3 line-clamp-2 text-muted-foreground text-sm">{conversation.lastMessageSummary ?? "No message summary yet."}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Badge variant={statusVariant(conversation.status)}>{conversation.status}</Badge>
-                          <Badge variant={statusVariant(conversation.aiStatus)}>
-                            <BotIcon className="size-3" />
-                            {conversation.aiStatus}
-                          </Badge>
-                        </div>
                       </div>
                     );
                   })}
@@ -138,13 +125,9 @@ export default async function CrmInboxPage() {
           <section className="flex min-h-[720px] flex-col bg-background">
             {activeConversation ? (
               <CrmChatThread
-                aiStatus={activeConversation.aiStatus}
-                aiStatusVariant={statusVariant(activeConversation.aiStatus)}
                 contactName={activeConversation.contactName ?? activeConversation.remoteJid}
                 initialMessages={chatMessages}
                 remoteJid={activeConversation.remoteJid}
-                status={activeConversation.status}
-                statusVariant={statusVariant(activeConversation.status)}
               />
             ) : (
               <div className="flex flex-1 items-center justify-center p-8 text-center">

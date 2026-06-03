@@ -1,9 +1,8 @@
 "use client";
 
-import { CheckCircle2Icon, ClockIcon, MessageCircleIcon, SendIcon } from "lucide-react";
+import { MessageCircleIcon, SendIcon } from "lucide-react";
 import * as React from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { ChatComposer, ChatMessages, ChatProvider, type ChatMessageData } from "@/components/ui/chat";
 
 import { createOptimisticMessage } from "./optimistic-chat";
@@ -15,16 +14,12 @@ const crmUser = {
 };
 
 type CrmChatThreadProps = {
-  aiStatus: string;
   contactName: string;
   initialMessages: ChatMessageData[];
   remoteJid: string;
-  status: string;
-  statusVariant: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
-  aiStatusVariant: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
 };
 
-export function CrmChatThread({ aiStatus, aiStatusVariant, contactName, initialMessages, remoteJid, status, statusVariant }: CrmChatThreadProps) {
+export function CrmChatThread({ contactName, initialMessages, remoteJid }: CrmChatThreadProps) {
   const [messages, setMessages] = React.useState(initialMessages);
 
   const handleSend = React.useCallback((text: string) => {
@@ -51,16 +46,6 @@ export function CrmChatThread({ aiStatus, aiStatusVariant, contactName, initialM
             <h2 className="truncate font-semibold text-lg">{contactName}</h2>
             <p className="truncate text-muted-foreground text-sm">{remoteJid}</p>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant={statusVariant}>
-            <ClockIcon className="size-3" />
-            {status}
-          </Badge>
-          <Badge variant={aiStatusVariant}>
-            <CheckCircle2Icon className="size-3" />
-            AI {aiStatus}
-          </Badge>
         </div>
       </header>
 
