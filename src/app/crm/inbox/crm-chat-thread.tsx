@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { ChatComposer, ChatMessages, ChatProvider, type ChatMessageData } from "@/components/ui/chat";
 
+import { sendManualWhatsAppMessage } from "./actions";
 import { createOptimisticMessage } from "./optimistic-chat";
 
 const crmUser = {
@@ -15,12 +16,14 @@ const crmUser = {
 
 type CrmChatThreadProps = {
   contactName: string;
+  conversationId: string;
   initialMessages: ChatMessageData[];
   onLocalSend?: (text: string, sentAt: Date) => void;
   remoteJid: string;
+  to: string;
 };
 
-export function CrmChatThread({ contactName, initialMessages, onLocalSend, remoteJid }: CrmChatThreadProps) {
+export function CrmChatThread({ contactName, conversationId, initialMessages, onLocalSend, remoteJid, to }: CrmChatThreadProps) {
   const [messages, setMessages] = React.useState(initialMessages);
 
   const handleSend = React.useCallback((text: string) => {
@@ -37,7 +40,11 @@ export function CrmChatThread({ contactName, initialMessages, onLocalSend, remot
       }),
     ]);
     onLocalSend?.(text, sentAt);
-  }, [onLocalSend]);
+
+    void sendManualWhatsAppMessage({ conversationId, text, to }).catch((error) => {
+      console.error(error);
+    });
+  }, [conversationId, onLocalSend, to]);
 
   return (
     <ChatProvider className="flex min-h-[720px] flex-1 flex-col bg-background" currentUser={crmUser} theme="lunar">
@@ -70,7 +77,7 @@ export function CrmChatThread({ contactName, initialMessages, onLocalSend, remot
           composerBodyClassName="border-t-0 bg-transparent px-0 py-0 backdrop-blur-none backdrop-saturate-100"
           inputContainerClassName="bg-transparent"
           onSend={handleSend}
-          placeholder="Type a demo reply — it will only appear locally"
+          placeholder="Type a WhatsApp reply"
         />
       </div>
     </ChatProvider>

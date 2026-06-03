@@ -20,6 +20,10 @@ export class EvolutionClient {
     return this.request(`/instance/setPresence/${this.options.instanceName}`, { method: "POST", body: JSON.stringify({ presence }) });
   }
 
+  getConnectionState() {
+    return this.request(`/instance/connectionState/${this.options.instanceName}`);
+  }
+
   sendTextMessage(number: string, text: string) {
     return this.request(`/message/sendText/${this.options.instanceName}`, { method: "POST", body: JSON.stringify({ number, text }) });
   }

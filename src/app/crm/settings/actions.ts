@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { aiProviderKeys, apiSettings } from "@/server/db/schema";
+import { testEvolutionConnection } from "@/server/crm/evolution";
 import { encryptSecret } from "@/server/security/crypto";
 
 function requiredString(formData: FormData, name: string) {
@@ -34,6 +35,11 @@ export async function saveEvolutionSettings(formData: FormData) {
   } else {
     await db.insert(apiSettings).values(values);
   }
+  revalidatePath("/crm/settings");
+}
+
+export async function testEvolutionSettings() {
+  await testEvolutionConnection();
   revalidatePath("/crm/settings");
 }
 

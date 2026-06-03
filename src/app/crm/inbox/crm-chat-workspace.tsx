@@ -105,9 +105,11 @@ export function CrmChatWorkspace({ initialConversations, initialMessages }: CrmC
           {activeConversation ? (
             <CrmChatThread
               contactName={activeConversation.contactName ?? activeConversation.remoteJid}
+              conversationId={activeConversation.id}
               initialMessages={initialMessages}
               onLocalSend={handleLocalSend}
               remoteJid={activeConversation.remoteJid}
+              to={activeConversation.phone ?? activeConversation.remoteJid}
             />
           ) : (
             <div className="flex flex-1 items-center justify-center p-8 text-center">
