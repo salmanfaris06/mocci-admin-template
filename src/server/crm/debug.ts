@@ -17,12 +17,30 @@ function countQuery(table: typeof contacts | typeof conversations | typeof messa
   return db.select({ count: sql<number>`count(*)::int` }).from(table);
 }
 
+function vercelWebhookUrl() {
+  const vercelUrl = process.env.VERCEL_URL;
+  if (!vercelUrl) return undefined;
+
+  const origin = vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://") ? vercelUrl : `https://${vercelUrl}`;
+  return `${origin.replace(/\/$/, "")}/api/webhooks/evolution`;
+}
+
+function effectiveWebhookUrl() {
+  const configuredUrl = process.env.EVOLUTION_WEBHOOK_URL?.trim();
+  const fallbackUrl = vercelWebhookUrl();
+
+  if (!configuredUrl) return fallbackUrl;
+  if (/https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(configuredUrl) && process.env.VERCEL_URL) return fallbackUrl;
+  return configuredUrl;
+}
+
 export async function getCrmDebugData() {
+  const webhookUrl = effectiveWebhookUrl();
   const evolutionSettings = {
     evolutionBaseUrl: process.env.EVOLUTION_BASE_URL ?? null,
     evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME ?? null,
-    webhookUrl: process.env.EVOLUTION_WEBHOOK_URL ?? null,
-    webhookEnabled: Boolean(process.env.EVOLUTION_WEBHOOK_URL),
+    webhookUrl: webhookUrl ?? null,
+    webhookEnabled: Boolean(webhookUrl),
     connectionState: process.env.EVOLUTION_BASE_URL && process.env.EVOLUTION_INSTANCE_NAME && process.env.EVOLUTION_API_KEY ? "Configured from environment" : "Evolution env not configured",
   };
   const webhookLogs = await safeQuery(() => db.select().from(webhookEvents).orderBy(desc(webhookEvents.createdAt)).limit(50));

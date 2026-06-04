@@ -19,9 +19,27 @@ function EnvStatus({ label, value, secret = false }: { label: string; value?: st
   );
 }
 
+function vercelWebhookUrl() {
+  const vercelUrl = process.env.VERCEL_URL;
+  if (!vercelUrl) return undefined;
+
+  const origin = vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://") ? vercelUrl : `https://${vercelUrl}`;
+  return `${origin.replace(/\/$/, "")}/api/webhooks/evolution`;
+}
+
+function effectiveWebhookUrl() {
+  const configuredUrl = process.env.EVOLUTION_WEBHOOK_URL?.trim();
+  const fallbackUrl = vercelWebhookUrl();
+
+  if (!configuredUrl) return fallbackUrl;
+  if (/https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(configuredUrl) && process.env.VERCEL_URL) return fallbackUrl;
+  return configuredUrl;
+}
+
 export default async function CrmSettingsPage() {
   const maskedOpenAi = process.env.OPENAI_API_KEY ? maskSecret(process.env.OPENAI_API_KEY) : "Not configured";
   const evolutionConfigured = Boolean(process.env.EVOLUTION_BASE_URL && process.env.EVOLUTION_INSTANCE_NAME && process.env.EVOLUTION_API_KEY);
+  const webhookUrl = effectiveWebhookUrl();
 
   return (
     <div className="space-y-6">
@@ -37,6 +55,7 @@ export default async function CrmSettingsPage() {
               <EnvStatus label="EVOLUTION_BASE_URL" value={process.env.EVOLUTION_BASE_URL} />
               <EnvStatus label="EVOLUTION_INSTANCE_NAME" value={process.env.EVOLUTION_INSTANCE_NAME} />
               <EnvStatus label="EVOLUTION_API_KEY" value={process.env.EVOLUTION_API_KEY} secret />
+              <EnvStatus label="Effective webhook URL" value={webhookUrl} />
               <EnvStatus label="EVOLUTION_WEBHOOK_URL" value={process.env.EVOLUTION_WEBHOOK_URL} />
             </div>
             <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">

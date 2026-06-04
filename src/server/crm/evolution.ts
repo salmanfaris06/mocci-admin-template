@@ -8,12 +8,32 @@ function requiredEnv(name: string) {
   return value;
 }
 
+function vercelWebhookUrl() {
+  const vercelUrl = process.env.VERCEL_URL;
+  if (!vercelUrl) return undefined;
+
+  const origin = vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://") ? vercelUrl : `https://${vercelUrl}`;
+  return `${origin.replace(/\/$/, "")}/api/webhooks/evolution`;
+}
+
+function getWebhookUrl() {
+  const configuredUrl = process.env.EVOLUTION_WEBHOOK_URL?.trim();
+  const fallbackUrl = vercelWebhookUrl();
+
+  if (!configuredUrl) return fallbackUrl;
+
+  const isLocalhost = /https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(configuredUrl);
+  if (isLocalhost && process.env.VERCEL_URL) return fallbackUrl;
+
+  return configuredUrl;
+}
+
 export async function getEvolutionSettings() {
   return {
     baseUrl: requiredEnv("EVOLUTION_BASE_URL"),
     apiKey: requiredEnv("EVOLUTION_API_KEY"),
     instanceName: requiredEnv("EVOLUTION_INSTANCE_NAME"),
-    webhookUrl: process.env.EVOLUTION_WEBHOOK_URL,
+    webhookUrl: getWebhookUrl(),
   };
 }
 
