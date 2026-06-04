@@ -14,10 +14,12 @@ import { promoteConversationPreview, selectConversationPreview } from "./optimis
 type ConversationPreview = {
   id: string;
   contactName: string | null;
+  displayName?: string;
   lastMessageAt: Date | string | null;
   lastMessageSummary: string | null;
   phone: string | null;
   remoteJid: string;
+  sourceLabel?: string;
 };
 
 type CrmChatWorkspaceProps = {
@@ -154,10 +156,10 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="truncate font-medium text-sm">{conversation.contactName ?? conversation.remoteJid}</div>
+                          <div className="truncate font-medium text-sm">{conversation.displayName ?? conversation.contactName ?? conversation.phone ?? conversation.remoteJid}</div>
                           <div className="mt-1 flex items-center gap-1 text-muted-foreground text-xs">
                             <PhoneIcon className="size-3" />
-                            <span className="truncate">{conversation.phone ?? conversation.remoteJid}</span>
+                            <span className="truncate">{conversation.sourceLabel ?? conversation.phone ?? conversation.remoteJid}</span>
                           </div>
                         </div>
                         <span className="shrink-0 text-muted-foreground text-[11px]">{formatTime(conversation.lastMessageAt)}</span>
@@ -174,7 +176,7 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
         <section className="flex min-h-0 flex-col overflow-hidden bg-background">
           {activeConversation ? (
             <CrmChatThread
-              contactName={activeConversation.contactName ?? activeConversation.remoteJid}
+              contactName={activeConversation.displayName ?? activeConversation.contactName ?? activeConversation.phone ?? activeConversation.remoteJid}
               conversationId={activeConversation.id}
               initialMessages={messages}
               key={`${activeConversation.id}:${messages.at(-1)?.id ?? "empty"}`}

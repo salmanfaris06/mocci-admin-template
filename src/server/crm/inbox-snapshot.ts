@@ -1,6 +1,9 @@
 import type { ChatMessageData } from "@/components/ui/chat";
 import { getConversationMessages, getRecentConversations } from "@/server/crm/queries";
 
+import { getConversationContactLabel, getConversationSourceLabel, getInboundSenderName } from "./whatsapp-display";
+
+type ConversationPreview = Awaited<ReturnType<typeof getRecentConversations>>[number];
 type ConversationMessage = Awaited<ReturnType<typeof getConversationMessages>>[number];
 
 function readText(message: ConversationMessage) {
@@ -16,23 +19,31 @@ function readTimestamp(message: ConversationMessage) {
   return message.createdAt;
 }
 
-function toChatMessage(message: ConversationMessage): ChatMessageData {
+function toChatMessage(message: ConversationMessage, conversation: ConversationPreview): ChatMessageData {
   const isOutgoing = message.direction === "outbound";
 
   return {
     id: message.id,
     senderId: isOutgoing ? "crm-agent" : "customer",
-    senderName: isOutgoing ? "CRM Agent" : "Customer",
+    senderName: isOutgoing ? "CRM Agent" : getInboundSenderName({ ...conversation, rawMetadata: "rawMetadata" in message ? message.rawMetadata : {} }),
     text: readText(message),
     timestamp: readTimestamp(message),
     status: isOutgoing ? "sent" : "delivered",
   };
 }
 
+function toConversationPreview(conversation: ConversationPreview) {
+  return {
+    ...conversation,
+    displayName: getConversationContactLabel(conversation),
+    sourceLabel: getConversationSourceLabel(conversation),
+  };
+}
+
 export async function getInboxSnapshot(conversationId?: string) {
   const conversations = await getRecentConversations(50);
   const activeConversation = conversations.find((conversation) => conversation.id === conversationId) ?? conversations[0];
-  const messages = activeConversation ? (await getConversationMessages(activeConversation.id)).map(toChatMessage) : [];
+  const messages = activeConversation ? (await getConversationMessages(activeConversation.id)).map((message) => toChatMessage(message, activeConversation)) : [];
 
-  return { conversations, activeConversationId: activeConversation?.id ?? null, messages };
+  return { conversations: conversations.map(toConversationPreview), activeConversationId: activeConversation?.id ?? null, messages };
 }
