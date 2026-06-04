@@ -1,1 +1,3 @@
-export { default } from "../../pages/chat/page";
+export const dynamic = "force-dynamic";
+
+export { default } from "../../crm/inbox/page";

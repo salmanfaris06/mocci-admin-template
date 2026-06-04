@@ -18,8 +18,6 @@ import {
   ClockIcon,
   EyeIcon,
   MousePointerClickIcon,
-  ShoppingCartIcon,
-  TrendingUpIcon,
   UsersIcon
 } from 'lucide-react'
 

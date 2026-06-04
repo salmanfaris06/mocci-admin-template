@@ -12,8 +12,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
-  CommandShortcut
+  CommandSeparator
 } from '@/components/ui/command'
 
 import type { NavConfig, NavItem } from '@/components/app-shell'

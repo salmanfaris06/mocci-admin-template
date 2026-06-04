@@ -1,11 +1,6 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
-
 import { EvolutionClient } from "../../../backend/src/evolution/client";
-import { db } from "@/server/db";
-import { apiSettings } from "@/server/db/schema";
-import { decryptSecret } from "@/server/security/crypto";
 
 function requiredEnv(name: string) {
   const value = process.env[name];
@@ -13,26 +8,26 @@ function requiredEnv(name: string) {
   return value;
 }
 
-function decryptIfPossible(value: string | null) {
-  if (!value) return undefined;
-  const key = process.env.SECRETS_ENCRYPTION_KEY;
-  return key ? decryptSecret(value, key) : undefined;
-}
-
 export async function getEvolutionSettings() {
-  const [settings] = await db.select().from(apiSettings).limit(1);
-
   return {
-    baseUrl: settings?.evolutionBaseUrl ?? requiredEnv("EVOLUTION_BASE_URL"),
-    apiKey: decryptIfPossible(settings?.evolutionApiKeyEncrypted ?? null) ?? requiredEnv("EVOLUTION_API_KEY"),
-    instanceName: settings?.evolutionInstanceName ?? requiredEnv("EVOLUTION_INSTANCE_NAME"),
-    settingsId: settings?.id,
+    baseUrl: requiredEnv("EVOLUTION_BASE_URL"),
+    apiKey: requiredEnv("EVOLUTION_API_KEY"),
+    instanceName: requiredEnv("EVOLUTION_INSTANCE_NAME"),
+    webhookUrl: process.env.EVOLUTION_WEBHOOK_URL,
   };
 }
 
 export async function getEvolutionClient() {
   const { apiKey, baseUrl, instanceName } = await getEvolutionSettings();
   return new EvolutionClient({ apiKey, baseUrl, instanceName });
+}
+
+export async function configureEvolutionWebhook() {
+  const settings = await getEvolutionSettings();
+  if (!settings.webhookUrl) return undefined;
+
+  const client = new EvolutionClient(settings);
+  return client.setWebhook(settings.webhookUrl);
 }
 
 function readStringField(value: unknown, path: string[]): string | undefined {
@@ -47,37 +42,96 @@ function readStringField(value: unknown, path: string[]): string | undefined {
 }
 
 export function extractQrCodeData(response: unknown) {
-  const code = readStringField(response, ["code"]) ?? readStringField(response, ["base64"]) ?? readStringField(response, ["qrcode", "base64"]) ?? readStringField(response, ["qrcode", "code"]);
-  const pairingCode = readStringField(response, ["pairingCode"]);
-  const image = code?.startsWith("data:image") ? code : code ? `data:image/png;base64,${code}` : undefined;
+  const base64Image =
+    readStringField(response, ["base64"]) ??
+    readStringField(response, ["qrcode", "base64"]) ??
+    readStringField(response, ["qrcode", "base64QRCode"]) ??
+    readStringField(response, ["qrCode", "base64"]) ??
+    readStringField(response, ["qr", "base64"]);
+  const qrCode =
+    readStringField(response, ["code"]) ??
+    readStringField(response, ["qrcode", "code"]) ??
+    readStringField(response, ["qrCode", "code"]) ??
+    readStringField(response, ["qr", "code"]) ??
+    readStringField(response, ["qrcode"]);
+  const pairingCode = readStringField(response, ["pairingCode"]) ?? readStringField(response, ["qrcode", "pairingCode"]);
+  const image = base64Image?.startsWith("data:image") ? base64Image : base64Image ? `data:image/png;base64,${base64Image}` : undefined;
 
-  return { image, pairingCode, raw: response };
+  return { image, code: qrCode, pairingCode, raw: response };
 }
 
 export async function createEvolutionInstance() {
   const settings = await getEvolutionSettings();
   const client = new EvolutionClient(settings);
-  const [dbSettings] = settings.settingsId ? await db.select().from(apiSettings).where(eq(apiSettings.id, settings.settingsId)).limit(1) : [];
+  const response = await client.createInstance(settings.webhookUrl);
 
-  return client.createInstance(dbSettings?.webhookUrl ?? undefined);
+  if (settings.webhookUrl) {
+    await client.setWebhook(settings.webhookUrl).catch(() => undefined);
+  }
+
+  return response;
 }
 
 export async function connectEvolutionInstance() {
-  const client = await getEvolutionClient();
+  const settings = await getEvolutionSettings();
+  const client = new EvolutionClient(settings);
+
+  if (settings.webhookUrl) {
+    await client.setWebhook(settings.webhookUrl).catch(() => undefined);
+  }
+
   return extractQrCodeData(await client.connectInstance());
+}
+
+function getStringField(value: unknown, path: string[]) {
+  let cursor = value;
+
+  for (const segment of path) {
+    if (!cursor || typeof cursor !== "object" || !(segment in cursor)) return undefined;
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+
+  return typeof cursor === "string" ? cursor : undefined;
+}
+
+function findInstance(instances: unknown, instanceName: string) {
+  if (!Array.isArray(instances)) return undefined;
+
+  return instances.find((instance) => {
+    const name =
+      getStringField(instance, ["name"]) ??
+      getStringField(instance, ["instanceName"]) ??
+      getStringField(instance, ["instance", "instanceName"]) ??
+      getStringField(instance, ["instance", "name"]);
+
+    return name === instanceName;
+  });
 }
 
 export async function testEvolutionConnection() {
   const settings = await getEvolutionSettings();
   const client = new EvolutionClient(settings);
-  const response = await client.getConnectionState();
 
-  if (settings.settingsId) {
-    await db
-      .update(apiSettings)
-      .set({ connectionState: JSON.stringify(response), updatedAt: new Date() })
-      .where(eq(apiSettings.id, settings.settingsId));
+  if (settings.webhookUrl) {
+    await client.setWebhook(settings.webhookUrl).catch(() => undefined);
   }
 
-  return response;
+  const connectionState = await client.getConnectionState();
+  const instances = await client.fetchInstances().catch(() => undefined);
+
+  return {
+    connectionState,
+    instance: findInstance(instances, settings.instanceName),
+    webhookUrl: settings.webhookUrl,
+  };
+}
+
+export async function disconnectWhatsAppInstance() {
+  const client = await getEvolutionClient();
+  return client.logoutInstance();
+}
+
+export async function deleteWhatsAppInstance() {
+  const client = await getEvolutionClient();
+  return client.deleteInstance();
 }

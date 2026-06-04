@@ -3,59 +3,48 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db } from "@/server/db";
-import { apiSettings } from "@/server/db/schema";
 import { maskSecret } from "@/server/security/crypto";
 
-import { saveEvolutionSettings, saveOpenAiKey } from "./actions";
+import { saveOpenAiKey } from "./actions";
 import { WhatsAppLoginCard } from "./whatsapp-login-card";
 
 export const dynamic = "force-dynamic";
 
+function EnvStatus({ label, value, secret = false }: { label: string; value?: string; secret?: boolean }) {
+  return (
+    <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+      <div className="text-muted-foreground">{label}</div>
+      <div className="mt-1 break-all font-medium">{value ? (secret ? maskSecret(value) : value) : "Not configured"}</div>
+    </div>
+  );
+}
+
 export default async function CrmSettingsPage() {
-  const [settings] = process.env.DATABASE_URL ? await db.select().from(apiSettings).limit(1) : [];
-  const maskedEvolution = process.env.EVOLUTION_API_KEY ? maskSecret(process.env.EVOLUTION_API_KEY) : "Not configured";
   const maskedOpenAi = process.env.OPENAI_API_KEY ? maskSecret(process.env.OPENAI_API_KEY) : "Not configured";
-  const connectionState = settings?.connectionState ?? "Not tested";
+  const evolutionConfigured = Boolean(process.env.EVOLUTION_BASE_URL && process.env.EVOLUTION_INSTANCE_NAME && process.env.EVOLUTION_API_KEY);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="API Settings" description="Store API credentials encrypted. Full secrets are never rendered back to the browser." />
+      <PageHeader title="API Settings" description="Evolution API is configured from environment variables. Secrets are never rendered back to the browser." />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Evolution API</CardTitle>
-            <CardDescription>Current env fallback: {maskedEvolution}</CardDescription>
+            <CardDescription>{evolutionConfigured ? "Configured from environment variables" : "Missing required environment variables"}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <form action={saveEvolutionSettings} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="evolutionBaseUrl">Base URL</Label>
-                <Input id="evolutionBaseUrl" name="evolutionBaseUrl" placeholder="https://evolution.example.com" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="evolutionInstanceName">Instance name</Label>
-                <Input id="evolutionInstanceName" name="evolutionInstanceName" placeholder="main" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="evolutionApiKey">API key</Label>
-                <Input id="evolutionApiKey" name="evolutionApiKey" type="password" autoComplete="new-password" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="webhookUrl">Webhook URL</Label>
-                <Input id="webhookUrl" name="webhookUrl" placeholder="https://api.example.com/webhooks/evolution" />
-              </div>
-              <Button className="w-fit" type="submit">
-                Save Evolution settings
-              </Button>
-            </form>
-            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-              <div className="font-medium">Connection state</div>
-              <p className="mt-1 break-words text-muted-foreground">{connectionState}</p>
+            <div className="grid gap-3">
+              <EnvStatus label="EVOLUTION_BASE_URL" value={process.env.EVOLUTION_BASE_URL} />
+              <EnvStatus label="EVOLUTION_INSTANCE_NAME" value={process.env.EVOLUTION_INSTANCE_NAME} />
+              <EnvStatus label="EVOLUTION_API_KEY" value={process.env.EVOLUTION_API_KEY} secret />
+              <EnvStatus label="EVOLUTION_WEBHOOK_URL" value={process.env.EVOLUTION_WEBHOOK_URL} />
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+              Edit these values in your deployment environment, for example Vercel Project Settings → Environment Variables. Then redeploy the app and click Refresh status.
             </div>
           </CardContent>
         </Card>
-        <WhatsAppLoginCard initialConnectionState={connectionState} />
+        <WhatsAppLoginCard initialConnectionState={evolutionConfigured ? "Not tested" : "Evolution env not configured"} />
 
         <Card>
           <CardHeader>

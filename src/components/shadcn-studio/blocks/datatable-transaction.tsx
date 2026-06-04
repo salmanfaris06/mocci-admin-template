@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library, @next/next/no-img-element */
 'use client'
 
 import { useState } from 'react'

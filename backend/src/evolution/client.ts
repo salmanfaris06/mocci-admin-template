@@ -1,5 +1,14 @@
 export type EvolutionClientOptions = { baseUrl: string; apiKey: string; instanceName: string };
 
+const defaultWebhookEvents = [
+  "MESSAGES_UPSERT",
+  "MESSAGES_UPDATE",
+  "CONNECTION_UPDATE",
+  "QRCODE_UPDATED",
+  "CONTACTS_UPSERT",
+  "CHATS_UPSERT",
+];
+
 export class EvolutionClient {
   constructor(private readonly options: EvolutionClientOptions) {}
 
@@ -25,8 +34,16 @@ export class EvolutionClient {
       method: "POST",
       body: JSON.stringify({
         instanceName: this.options.instanceName,
+        integration: "WHATSAPP-BAILEYS",
         qrcode: true,
-        webhook: webhookUrl ? { enabled: true, url: webhookUrl } : undefined,
+        webhook: webhookUrl
+          ? {
+              enabled: true,
+              url: webhookUrl,
+              webhookByEvents: false,
+              events: defaultWebhookEvents,
+            }
+          : undefined,
       }),
     });
   }
@@ -37,6 +54,31 @@ export class EvolutionClient {
 
   getConnectionState() {
     return this.request(`/instance/connectionState/${this.options.instanceName}`);
+  }
+
+  fetchInstances() {
+    return this.request("/instance/fetchInstances");
+  }
+
+  setWebhook(webhookUrl: string) {
+    return this.request(`/webhook/set/${this.options.instanceName}`, {
+      method: "POST",
+      body: JSON.stringify({
+        enabled: true,
+        url: webhookUrl,
+        webhookByEvents: false,
+        base64: false,
+        events: defaultWebhookEvents,
+      }),
+    });
+  }
+
+  logoutInstance() {
+    return this.request(`/instance/logout/${this.options.instanceName}`, { method: "DELETE" });
+  }
+
+  deleteInstance() {
+    return this.request(`/instance/delete/${this.options.instanceName}`, { method: "DELETE" });
   }
 
   sendTextMessage(number: string, text: string) {

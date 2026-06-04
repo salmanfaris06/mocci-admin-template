@@ -2,24 +2,45 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-function createDatabase() {
+type SqlClient = ReturnType<typeof postgres>;
+type Database = ReturnType<typeof createDatabase>;
+
+declare global {
+  var __mocciPostgresClient: SqlClient | undefined;
+  var __mocciDatabase: Database | undefined;
+}
+
+function getConnectionString() {
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
     throw new Error("DATABASE_URL is required");
   }
 
-  const client = postgres(connectionString, { prepare: false });
-  return drizzle(client, { schema });
+  return connectionString;
 }
 
-type Database = ReturnType<typeof createDatabase>;
+function createPostgresClient() {
+  return postgres(getConnectionString(), {
+    prepare: false,
+    max: Number(process.env.DATABASE_MAX_CONNECTIONS ?? 1),
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
+}
 
-let database: Database | undefined;
+function getPostgresClient() {
+  globalThis.__mocciPostgresClient ??= createPostgresClient();
+  return globalThis.__mocciPostgresClient;
+}
+
+function createDatabase() {
+  return drizzle(getPostgresClient(), { schema });
+}
 
 function getDatabase() {
-  database ??= createDatabase();
-  return database;
+  globalThis.__mocciDatabase ??= createDatabase();
+  return globalThis.__mocciDatabase;
 }
 
 export const db = new Proxy({} as Database, {
