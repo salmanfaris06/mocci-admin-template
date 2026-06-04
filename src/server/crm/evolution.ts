@@ -83,13 +83,25 @@ export function extractQrCodeData(response: unknown) {
 export async function createEvolutionInstance() {
   const settings = await getEvolutionSettings();
   const client = new EvolutionClient(settings);
-  const response = await client.createInstance(settings.webhookUrl);
 
-  if (settings.webhookUrl) {
-    await client.setWebhook(settings.webhookUrl);
+  try {
+    const response = await client.createInstance(settings.webhookUrl);
+
+    if (settings.webhookUrl) {
+      await client.setWebhook(settings.webhookUrl);
+    }
+
+    return response;
+  } catch (error) {
+    if (!isBrokenEvolutionInstanceError(error)) throw error;
+
+    await client.deleteInstance();
+    const response = await client.createInstance(settings.webhookUrl);
+    if (settings.webhookUrl) {
+      await client.setWebhook(settings.webhookUrl);
+    }
+    return response;
   }
-
-  return response;
 }
 
 function isBrokenEvolutionInstanceError(error: unknown) {

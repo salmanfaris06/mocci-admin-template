@@ -11,6 +11,7 @@ const defaultWebhookEvents = [
 
 type EvolutionRequestOptions = {
   idempotentAlreadyExistsMessage?: string;
+  idempotentBrokenInstanceMessage?: string;
   idempotentConnectionClosedMessage?: string;
   idempotentNotFoundMessage?: string;
 };
@@ -33,6 +34,9 @@ export class EvolutionClient {
         const bodyText = await response.text();
         if (requestOptions.idempotentAlreadyExistsMessage && bodyText.toLowerCase().includes("already in use")) {
           return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentAlreadyExistsMessage } };
+        }
+        if (requestOptions.idempotentBrokenInstanceMessage && bodyText.includes("reading 'instanceId'")) {
+          return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentBrokenInstanceMessage } };
         }
         if (requestOptions.idempotentConnectionClosedMessage && bodyText.toLowerCase().includes("connection closed")) {
           return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentConnectionClosedMessage } };
@@ -121,7 +125,7 @@ export class EvolutionClient {
   }
 
   deleteInstance() {
-    return this.request(`/instance/delete/${this.options.instanceName}`, { method: "DELETE" }, { idempotentConnectionClosedMessage: "Instance already deleted", idempotentNotFoundMessage: "Instance already deleted" });
+    return this.request(`/instance/delete/${this.options.instanceName}`, { method: "DELETE" }, { idempotentBrokenInstanceMessage: "Instance already deleted", idempotentConnectionClosedMessage: "Instance already deleted", idempotentNotFoundMessage: "Instance already deleted" });
   }
 
   sendTextMessage(number: string, text: string) {
