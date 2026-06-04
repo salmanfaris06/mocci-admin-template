@@ -49,6 +49,30 @@ describe("EvolutionClient", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("https://evolution.example/instance/connectionState/main");
   });
 
+  it("treats Evolution connection-closed logout as an idempotent disconnect", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: 500, error: "Internal Server Error", response: { message: ["Error: Connection Closed"] } }), { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({ baseUrl: "https://evolution.example", apiKey: "secret", instanceName: "main" });
+
+    await expect(client.logoutInstance()).resolves.toMatchObject({
+      status: "SUCCESS",
+      response: { message: "Instance already disconnected" },
+    });
+  });
+
+  it("treats missing instance delete as an idempotent delete", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: 404, error: "Not Found", response: { message: ["instance does not exist"] } }), { status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({ baseUrl: "https://evolution.example", apiKey: "secret", instanceName: "main" });
+
+    await expect(client.deleteInstance()).resolves.toMatchObject({
+      status: "SUCCESS",
+      response: { message: "Instance already deleted" },
+    });
+  });
+
   it("aborts slow Evolution API requests instead of hanging indefinitely", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn((_url: string, init: RequestInit) => {

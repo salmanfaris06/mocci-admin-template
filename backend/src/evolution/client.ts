@@ -9,10 +9,15 @@ const defaultWebhookEvents = [
   "CHATS_UPSERT",
 ];
 
+type EvolutionRequestOptions = {
+  idempotentConnectionClosedMessage?: string;
+  idempotentNotFoundMessage?: string;
+};
+
 export class EvolutionClient {
   constructor(private readonly options: EvolutionClientOptions) {}
 
-  private async request(path: string, init: RequestInit = {}) {
+  private async request(path: string, init: RequestInit = {}, requestOptions: EvolutionRequestOptions = {}) {
     const timeoutMs = this.options.timeoutMs ?? 15_000;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -23,7 +28,16 @@ export class EvolutionClient {
         headers: { "content-type": "application/json", apikey: this.options.apiKey, ...init.headers },
         signal: controller.signal,
       });
-      if (!response.ok) throw new Error(`Evolution API request failed ${response.status}: ${await response.text()}`);
+      if (!response.ok) {
+        const bodyText = await response.text();
+        if (requestOptions.idempotentConnectionClosedMessage && bodyText.toLowerCase().includes("connection closed")) {
+          return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentConnectionClosedMessage } };
+        }
+        if (requestOptions.idempotentNotFoundMessage && response.status === 404) {
+          return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentNotFoundMessage } };
+        }
+        throw new Error(`Evolution API request failed ${response.status}: ${bodyText}`);
+      }
       return response.json() as Promise<unknown>;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -95,11 +109,11 @@ export class EvolutionClient {
   }
 
   logoutInstance() {
-    return this.request(`/instance/logout/${this.options.instanceName}`, { method: "DELETE" });
+    return this.request(`/instance/logout/${this.options.instanceName}`, { method: "DELETE" }, { idempotentConnectionClosedMessage: "Instance already disconnected" });
   }
 
   deleteInstance() {
-    return this.request(`/instance/delete/${this.options.instanceName}`, { method: "DELETE" });
+    return this.request(`/instance/delete/${this.options.instanceName}`, { method: "DELETE" }, { idempotentConnectionClosedMessage: "Instance already deleted", idempotentNotFoundMessage: "Instance already deleted" });
   }
 
   sendTextMessage(number: string, text: string) {
