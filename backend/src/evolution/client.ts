@@ -54,7 +54,10 @@ export class EvolutionClient {
           ? {
               enabled: true,
               url: webhookUrl,
+              byEvents: false,
+              base64: false,
               webhookByEvents: false,
+              webhookBase64: false,
               events: defaultWebhookEvents,
             }
           : undefined,
@@ -81,6 +84,8 @@ export class EvolutionClient {
         webhook: {
           enabled: true,
           url: webhookUrl,
+          byEvents: false,
+          base64: false,
           webhookByEvents: false,
           webhookBase64: false,
           events: defaultWebhookEvents,
