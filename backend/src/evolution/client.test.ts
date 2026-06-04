@@ -28,9 +28,9 @@ describe("EvolutionClient", () => {
       webhook: {
         enabled: true,
         url: "https://app.example/api/webhooks/evolution",
-        byEvents: false,
+        byEvents: true,
         base64: false,
-        webhookByEvents: false,
+        webhookByEvents: true,
         webhookBase64: false,
         events: expect.arrayContaining(["MESSAGES_UPSERT"]),
       },
