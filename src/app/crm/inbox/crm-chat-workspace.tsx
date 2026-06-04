@@ -9,7 +9,7 @@ import type { ChatMessageData } from "@/components/ui/chat";
 import { cn } from "@/lib/utils";
 
 import { CrmChatThread } from "./crm-chat-thread";
-import { promoteConversationPreview } from "./optimistic-chat";
+import { promoteConversationPreview, selectConversationPreview } from "./optimistic-chat";
 
 type ConversationPreview = {
   id: string;
@@ -21,8 +21,15 @@ type ConversationPreview = {
 };
 
 type CrmChatWorkspaceProps = {
+  initialActiveConversationId: string | null;
   initialConversations: ConversationPreview[];
   initialMessages: ChatMessageData[];
+};
+
+type InboxSnapshot = {
+  activeConversationId: string | null;
+  conversations: ConversationPreview[];
+  messages: ChatMessageData[];
 };
 
 function formatTime(value: Date | null) {
@@ -36,9 +43,38 @@ function formatTime(value: Date | null) {
   }).format(value);
 }
 
-export function CrmChatWorkspace({ initialConversations, initialMessages }: CrmChatWorkspaceProps) {
+export function CrmChatWorkspace({ initialActiveConversationId, initialConversations, initialMessages }: CrmChatWorkspaceProps) {
   const [conversations, setConversations] = React.useState(initialConversations);
-  const activeConversation = conversations[0];
+  const [selectedConversationId, setSelectedConversationId] = React.useState(initialActiveConversationId);
+  const [messages, setMessages] = React.useState(initialMessages);
+  const [isRefreshing, startRefreshTransition] = React.useTransition();
+  const activeConversation = selectConversationPreview(conversations, selectedConversationId);
+
+  const refreshInbox = React.useCallback((conversationId: string | null) => {
+    const params = new URLSearchParams();
+    if (conversationId) params.set("conversationId", conversationId);
+
+    startRefreshTransition(() => {
+      void fetch(`/api/crm/inbox?${params.toString()}`, { cache: "no-store" })
+        .then((response) => {
+          if (!response.ok) throw new Error("Failed to refresh inbox");
+          return response.json() as Promise<InboxSnapshot>;
+        })
+        .then((snapshot) => {
+          setConversations(snapshot.conversations);
+          setSelectedConversationId(snapshot.activeConversationId);
+          setMessages(snapshot.messages);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    });
+  }, []);
+
+  const handleSelectConversation = React.useCallback((conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    refreshInbox(conversationId);
+  }, [refreshInbox]);
 
   const handleLocalSend = React.useCallback((text: string, sentAt: Date) => {
     if (!activeConversation) return;
@@ -51,6 +87,14 @@ export function CrmChatWorkspace({ initialConversations, initialMessages }: CrmC
       }),
     );
   }, [activeConversation]);
+
+  React.useEffect(() => {
+    const timer = window.setInterval(() => {
+      refreshInbox(selectedConversationId);
+    }, 10_000);
+
+    return () => window.clearInterval(timer);
+  }, [refreshInbox, selectedConversationId]);
 
   return (
     <Card className="overflow-hidden p-0">
@@ -75,12 +119,15 @@ export function CrmChatWorkspace({ initialConversations, initialMessages }: CrmC
                   const active = conversation.id === activeConversation?.id;
 
                   return (
-                    <div
+                    <button
                       className={cn(
-                        "rounded-xl border p-3 transition-colors",
+                        "w-full rounded-xl border p-3 text-left transition-colors",
                         active ? "border-primary/40 bg-primary/5 shadow-sm" : "border-transparent bg-background hover:border-border hover:bg-muted/40",
                       )}
+                      disabled={isRefreshing && active}
                       key={conversation.id}
+                      onClick={() => handleSelectConversation(conversation.id)}
+                      type="button"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -93,7 +140,7 @@ export function CrmChatWorkspace({ initialConversations, initialMessages }: CrmC
                         <span className="shrink-0 text-muted-foreground text-[11px]">{formatTime(conversation.lastMessageAt)}</span>
                       </div>
                       <p className="mt-3 line-clamp-2 text-muted-foreground text-sm">{conversation.lastMessageSummary ?? "No message summary yet."}</p>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -106,7 +153,8 @@ export function CrmChatWorkspace({ initialConversations, initialMessages }: CrmC
             <CrmChatThread
               contactName={activeConversation.contactName ?? activeConversation.remoteJid}
               conversationId={activeConversation.id}
-              initialMessages={initialMessages}
+              initialMessages={messages}
+              key={`${activeConversation.id}:${messages.at(-1)?.id ?? "empty"}`}
               onLocalSend={handleLocalSend}
               remoteJid={activeConversation.remoteJid}
               to={activeConversation.phone ?? activeConversation.remoteJid}

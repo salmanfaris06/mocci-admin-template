@@ -42,3 +42,7 @@ export function promoteConversationPreview<TConversation extends ConversationPre
 
   return [{ ...updatedConversation, lastMessageAt, lastMessageSummary }, ...otherConversations];
 }
+
+export function selectConversationPreview<TConversation extends ConversationPreview>(conversations: TConversation[], selectedConversationId?: string | null) {
+  return conversations.find((conversation) => conversation.id === selectedConversationId) ?? conversations[0];
+}
