@@ -36,7 +36,7 @@ export class EvolutionClient {
           return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentAlreadyExistsMessage } };
         }
         if (requestOptions.idempotentBrokenInstanceMessage && bodyText.includes("reading 'instanceId'")) {
-          return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentBrokenInstanceMessage } };
+          throw new Error(`Evolution API broken instance state ${response.status}: ${bodyText}`);
         }
         if (requestOptions.idempotentConnectionClosedMessage && bodyText.toLowerCase().includes("connection closed")) {
           return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentConnectionClosedMessage } };
@@ -124,8 +124,19 @@ export class EvolutionClient {
     return this.request(`/instance/logout/${this.options.instanceName}`, { method: "DELETE" }, { idempotentConnectionClosedMessage: "Instance already disconnected" });
   }
 
-  deleteInstance() {
-    return this.request(`/instance/delete/${this.options.instanceName}`, { method: "DELETE" }, { idempotentBrokenInstanceMessage: "Instance already deleted", idempotentConnectionClosedMessage: "Instance already deleted", idempotentNotFoundMessage: "Instance already deleted" });
+  restartInstance() {
+    return this.request(`/instance/restart/${this.options.instanceName}`, { method: "PUT" }, { idempotentNotFoundMessage: "Instance not found" });
+  }
+
+  async deleteInstance() {
+    try {
+      return await this.request(`/instance/delete/${this.options.instanceName}`, { method: "DELETE" }, { idempotentBrokenInstanceMessage: "Instance already deleted", idempotentConnectionClosedMessage: "Instance already deleted", idempotentNotFoundMessage: "Instance already deleted" });
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("Evolution API broken instance state")) throw error;
+
+      await this.restartInstance().catch(() => undefined);
+      return this.request(`/instance/delete/${this.options.instanceName}`, { method: "DELETE" }, { idempotentConnectionClosedMessage: "Instance already deleted", idempotentNotFoundMessage: "Instance already deleted" });
+    }
   }
 
   sendTextMessage(number: string, text: string) {

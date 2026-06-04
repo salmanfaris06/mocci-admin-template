@@ -94,16 +94,26 @@ describe("EvolutionClient", () => {
     });
   });
 
-  it("treats broken instanceId delete errors as an idempotent delete", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: 500, error: "Internal Server Error", response: { message: "Cannot read properties of undefined (reading 'instanceId')" } }), { status: 500 }));
+  it("restarts then deletes when delete hits a broken instanceId state", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 500, error: "Internal Server Error", response: { message: "Cannot read properties of undefined (reading 'instanceId')" } }), { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ instance: { instanceName: "main", state: "close" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "SUCCESS", error: false, response: { message: "Instance deleted" } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new EvolutionClient({ baseUrl: "https://evolution.example", apiKey: "secret", instanceName: "main" });
 
     await expect(client.deleteInstance()).resolves.toMatchObject({
       status: "SUCCESS",
-      response: { message: "Instance already deleted" },
+      response: { message: "Instance deleted" },
     });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://evolution.example/instance/delete/main",
+      "https://evolution.example/instance/restart/main",
+      "https://evolution.example/instance/delete/main",
+    ]);
   });
 
   it("aborts slow Evolution API requests instead of hanging indefinitely", async () => {
