@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCrmDebugData } from "@/server/crm/debug";
 
+import { RefreshDebugButton } from "./refresh-debug-button";
+
 export const dynamic = "force-dynamic";
 
 function JsonBlock({ value }: { value: unknown }) {
@@ -59,7 +61,10 @@ export default async function CrmDebugPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Debug & Logs" description="Inspect Evolution webhooks, message ingestion, connection state, and CRM database health." />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <PageHeader title="Debug & Logs" description="Inspect Evolution webhooks, message ingestion, connection state, and CRM database health." />
+        <RefreshDebugButton />
+      </div>
 
       <Tabs defaultValue="webhooks" className="space-y-4">
         <TabsList className="flex w-full flex-wrap justify-start">
