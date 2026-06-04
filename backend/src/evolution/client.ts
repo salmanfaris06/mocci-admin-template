@@ -1,4 +1,4 @@
-export type EvolutionClientOptions = { baseUrl: string; apiKey: string; instanceName: string };
+export type EvolutionClientOptions = { baseUrl: string; apiKey: string; instanceName: string; timeoutMs?: number };
 
 const defaultWebhookEvents = [
   "MESSAGES_UPSERT",
@@ -13,12 +13,26 @@ export class EvolutionClient {
   constructor(private readonly options: EvolutionClientOptions) {}
 
   private async request(path: string, init: RequestInit = {}) {
-    const response = await fetch(`${this.options.baseUrl}${path}`, {
-      ...init,
-      headers: { "content-type": "application/json", apikey: this.options.apiKey, ...init.headers },
-    });
-    if (!response.ok) throw new Error(`Evolution API request failed ${response.status}: ${await response.text()}`);
-    return response.json() as Promise<unknown>;
+    const timeoutMs = this.options.timeoutMs ?? 15_000;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(`${this.options.baseUrl}${path}`, {
+        ...init,
+        headers: { "content-type": "application/json", apikey: this.options.apiKey, ...init.headers },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`Evolution API request failed ${response.status}: ${await response.text()}`);
+      return response.json() as Promise<unknown>;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error(`Evolution API request timed out after ${timeoutMs}ms`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   markMessageAsRead(readMessages: unknown[]) {

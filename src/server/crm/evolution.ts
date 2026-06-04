@@ -132,10 +132,6 @@ export async function testEvolutionConnection() {
   const settings = await getEvolutionSettings();
   const client = new EvolutionClient(settings);
 
-  if (settings.webhookUrl) {
-    await client.setWebhook(settings.webhookUrl);
-  }
-
   const connectionState = await client.getConnectionState();
   const instances = await client.fetchInstances().catch(() => undefined);
 
