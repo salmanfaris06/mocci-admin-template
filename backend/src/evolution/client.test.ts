@@ -24,11 +24,13 @@ describe("EvolutionClient", () => {
       }),
     );
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
-      enabled: true,
-      url: "https://app.example/api/webhooks/evolution",
-      webhookByEvents: false,
-      webhookBase64: false,
-      events: expect.arrayContaining(["MESSAGES_UPSERT"]),
+      webhook: {
+        enabled: true,
+        url: "https://app.example/api/webhooks/evolution",
+        webhookByEvents: false,
+        webhookBase64: false,
+        events: expect.arrayContaining(["MESSAGES_UPSERT"]),
+      },
     });
   });
 });

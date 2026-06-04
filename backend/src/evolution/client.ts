@@ -64,11 +64,13 @@ export class EvolutionClient {
     return this.request(`/webhook/set/${this.options.instanceName}`, {
       method: "POST",
       body: JSON.stringify({
-        enabled: true,
-        url: webhookUrl,
-        webhookByEvents: false,
-        webhookBase64: false,
-        events: defaultWebhookEvents,
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          webhookBase64: false,
+          events: defaultWebhookEvents,
+        },
       }),
     });
   }
