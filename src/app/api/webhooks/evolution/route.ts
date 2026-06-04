@@ -251,7 +251,12 @@ export async function handleEvolutionWebhook(request: Request, pathEvent?: strin
 }
 
 export async function GET(request: Request) {
-  return handleEvolutionWebhook(request);
+  return Response.json({
+    ok: true,
+    endpoint: new URL(request.url).pathname,
+    status: "ready",
+    message: "Evolution webhook endpoint is ready. Incoming WhatsApp messages must be delivered with POST and a JSON body.",
+  });
 }
 
 export async function POST(request: Request) {
