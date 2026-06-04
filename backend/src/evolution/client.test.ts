@@ -70,6 +70,21 @@ describe("EvolutionClient", () => {
     await expect(client.connectInstance()).rejects.toThrow("reading 'instanceId'");
   });
 
+  it("creates instances without asking Evolution to generate QR during create", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: "SUCCESS", response: { message: "Instance created" } }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({ baseUrl: "https://evolution.example", apiKey: "secret", instanceName: "main" });
+
+    await client.createInstance();
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      instanceName: "main",
+      integration: "WHATSAPP-BAILEYS",
+      qrcode: false,
+    });
+  });
+
   it("treats an existing instance name as an idempotent create", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: 403, error: "Forbidden", response: { message: ['This name "main" is already in use.'] } }), { status: 403 }));
     vi.stubGlobal("fetch", fetchMock);

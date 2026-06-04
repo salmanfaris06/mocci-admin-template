@@ -73,7 +73,7 @@ export class EvolutionClient {
         body: JSON.stringify({
           instanceName: this.options.instanceName,
           integration: "WHATSAPP-BAILEYS",
-          qrcode: true,
+          qrcode: false,
           webhook: webhookUrl
             ? {
                 enabled: true,
