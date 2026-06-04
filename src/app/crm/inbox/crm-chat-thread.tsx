@@ -3,6 +3,7 @@
 import { MessageCircleIcon } from "lucide-react";
 import * as React from "react";
 
+import { Button } from "@/components/ui/button";
 import { ChatComposer, ChatMessages, ChatProvider, type ChatMessageData } from "@/components/ui/chat";
 
 import { sendManualWhatsAppMessage } from "./actions";
@@ -17,13 +18,16 @@ const crmUser = {
 type CrmChatThreadProps = {
   contactName: string;
   conversationId: string;
+  hasMoreMessages?: boolean;
   initialMessages: ChatMessageData[];
+  isLoadingOlder?: boolean;
+  onLoadOlder?: () => void;
   onLocalSend?: (text: string, sentAt: Date) => void;
   remoteJid: string;
   to: string;
 };
 
-export function CrmChatThread({ contactName, conversationId, initialMessages, onLocalSend, remoteJid, to }: CrmChatThreadProps) {
+export function CrmChatThread({ contactName, conversationId, hasMoreMessages = false, initialMessages, isLoadingOlder = false, onLoadOlder, onLocalSend, remoteJid, to }: CrmChatThreadProps) {
   const [messages, setMessages] = React.useState(initialMessages);
 
   const handleSend = React.useCallback((text: string) => {
@@ -61,7 +65,16 @@ export function CrmChatThread({ contactName, conversationId, initialMessages, on
       </header>
 
       {messages.length > 0 ? (
-        <ChatMessages className="min-h-0 flex-1" messages={messages} />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {hasMoreMessages ? (
+            <div className="border-border border-b px-4 py-2 text-center">
+              <Button disabled={isLoadingOlder} onClick={onLoadOlder} size="sm" type="button" variant="ghost">
+                {isLoadingOlder ? "Loading older messages..." : "Load older messages"}
+              </Button>
+            </div>
+          ) : null}
+          <ChatMessages className="min-h-0 flex-1" messages={messages} />
+        </div>
       ) : (
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-8 text-center">
           <div>

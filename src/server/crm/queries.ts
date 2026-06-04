@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { aiAgents, aiRuns, aiUsageLogs, contacts, conversations, messages, pipelineItems, pipelineStages } from "@/server/db/schema";
 
@@ -237,10 +237,25 @@ export async function getRecentConversations(limit = 20) {
   return db.select({ id: conversations.id, status: conversations.status, aiStatus: conversations.aiStatus, lastMessageSummary: conversations.lastMessageSummary, lastMessageAt: conversations.lastMessageAt, contactName: contacts.displayName, remoteJid: contacts.remoteJid, phone: contacts.phone }).from(conversations).innerJoin(contacts, eq(conversations.contactId, contacts.id)).orderBy(desc(conversations.lastMessageAt)).limit(limit);
 }
 
-export async function getConversationMessages(conversationId: string) {
-  if (!isDatabaseConfigured()) return demoMessages[conversationId as keyof typeof demoMessages] ?? [];
+type GetConversationMessagesOptions = {
+  before?: Date | string;
+  limit?: number;
+};
 
-  return db.select().from(messages).where(eq(messages.conversationId, conversationId)).orderBy(messages.createdAt);
+export async function getConversationMessages(conversationId: string, options: GetConversationMessagesOptions = {}) {
+  const limit = options.limit ?? 50;
+  const before = options.before ? new Date(options.before) : null;
+
+  if (!isDatabaseConfigured()) {
+    const records = demoMessages[conversationId as keyof typeof demoMessages] ?? [];
+    const filteredRecords = before && !Number.isNaN(before.getTime()) ? records.filter((message) => message.createdAt < before) : records;
+    return filteredRecords.slice(-limit);
+  }
+
+  const whereClause = before && !Number.isNaN(before.getTime()) ? and(eq(messages.conversationId, conversationId), lt(messages.createdAt, before)) : eq(messages.conversationId, conversationId);
+  const records = await db.select().from(messages).where(whereClause).orderBy(desc(messages.createdAt)).limit(limit);
+
+  return records.reverse();
 }
 
 export async function getPipelineBoard() {

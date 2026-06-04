@@ -5,7 +5,7 @@ import { getConversationMessages, getRecentConversations } from "@/server/crm/qu
 import { db } from "@/server/db";
 import { contacts } from "@/server/db/schema";
 
-import { getConversationContactLabel, getConversationSourceLabel, getGroupParticipantJid, getInboundSenderId, getInboundSenderName } from "./whatsapp-display";
+import { getConversationContactLabel, getConversationSourceLabel, getGroupParticipantJid, getInboundSenderId, getInboundSenderName, isGroupJid } from "./whatsapp-display";
 
 type ConversationPreview = Awaited<ReturnType<typeof getRecentConversations>>[number];
 type ConversationMessage = Awaited<ReturnType<typeof getConversationMessages>>[number];
@@ -23,26 +23,41 @@ function readTimestamp(message: ConversationMessage) {
   return message.createdAt;
 }
 
+type GetInboxSnapshotOptions = {
+  before?: string;
+  messageLimit?: number;
+};
+
 function toChatMessage(message: ConversationMessage, conversation: ConversationPreview, participantNames: Map<string, string>): ChatMessageData {
   const isOutgoing = message.direction === "outbound";
   const rawMetadata = "rawMetadata" in message ? message.rawMetadata : {};
   const participantJid = getGroupParticipantJid(rawMetadata);
 
+  const inboundSenderName = getInboundSenderName({ ...conversation, participantContactName: participantJid ? participantNames.get(participantJid) : null, rawMetadata });
+  const senderName = isGroupJid(conversation.remoteJid) ? `${inboundSenderName} · ${getConversationContactLabel(conversation)}` : inboundSenderName;
+
   return {
     id: message.id,
     senderId: isOutgoing ? "crm-agent" : getInboundSenderId({ remoteJid: conversation.remoteJid, rawMetadata }),
-    senderName: isOutgoing ? "CRM Agent" : getInboundSenderName({ ...conversation, participantContactName: participantJid ? participantNames.get(participantJid) : null, rawMetadata }),
+    senderName: isOutgoing ? "CRM Agent" : senderName,
     text: readText(message),
     timestamp: readTimestamp(message),
     status: isOutgoing ? "sent" : "delivered",
   };
 }
 
+function readUnreadCount(conversation: ConversationPreview) {
+  if ("unreadCount" in conversation && typeof conversation.unreadCount === "number") return conversation.unreadCount;
+  return 0;
+}
+
 function toConversationPreview(conversation: ConversationPreview) {
   return {
     ...conversation,
     displayName: getConversationContactLabel(conversation),
+    isGroup: isGroupJid(conversation.remoteJid),
     sourceLabel: getConversationSourceLabel(conversation),
+    unreadCount: readUnreadCount(conversation),
   };
 }
 
@@ -57,13 +72,16 @@ async function getParticipantNames(participantJids: string[]) {
   return new Map(rows.flatMap((contact) => (contact.displayName ? [[contact.remoteJid, contact.displayName] as const] : [])));
 }
 
-export async function getInboxSnapshot(conversationId?: string) {
+export async function getInboxSnapshot(conversationId?: string, options: GetInboxSnapshotOptions = {}) {
+  const messageLimit = options.messageLimit ?? 50;
   const conversations = await getRecentConversations(50);
   const activeConversation = conversations.find((conversation) => conversation.id === conversationId) ?? conversations[0];
-  const conversationMessages = activeConversation ? await getConversationMessages(activeConversation.id) : [];
-  const participantJids = [...new Set(conversationMessages.map((message) => getGroupParticipantJid("rawMetadata" in message ? message.rawMetadata : {})).filter((jid): jid is string => Boolean(jid)))];
+  const conversationMessages = activeConversation ? await getConversationMessages(activeConversation.id, { before: options.before, limit: messageLimit + 1 }) : [];
+  const hasMoreMessages = conversationMessages.length > messageLimit;
+  const visibleMessages = hasMoreMessages ? conversationMessages.slice(1) : conversationMessages;
+  const participantJids = [...new Set(visibleMessages.map((message) => getGroupParticipantJid("rawMetadata" in message ? message.rawMetadata : {})).filter((jid): jid is string => Boolean(jid)))];
   const participantNames = await getParticipantNames(participantJids);
-  const messages = activeConversation ? conversationMessages.map((message) => toChatMessage(message, activeConversation, participantNames)) : [];
+  const messages = activeConversation ? visibleMessages.map((message) => toChatMessage(message, activeConversation, participantNames)) : [];
 
-  return { conversations: conversations.map(toConversationPreview), activeConversationId: activeConversation?.id ?? null, messages };
+  return { conversations: conversations.map(toConversationPreview), activeConversationId: activeConversation?.id ?? null, hasMoreMessages, messages };
 }
