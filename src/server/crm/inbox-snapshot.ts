@@ -5,7 +5,7 @@ import { getConversationMessages, getRecentConversations } from "@/server/crm/qu
 import { db } from "@/server/db";
 import { contacts } from "@/server/db/schema";
 
-import { getConversationContactLabel, getConversationSourceLabel, getGroupParticipantJid, getInboundSenderId, getInboundSenderName, isGroupJid } from "./whatsapp-display";
+import { getConversationContactLabel, getConversationSourceLabel, getGroupNameFromMetadata, getGroupParticipantJid, getInboundSenderId, getInboundSenderName, isGroupJid } from "./whatsapp-display";
 
 type ConversationPreview = Awaited<ReturnType<typeof getRecentConversations>>[number];
 type ConversationMessage = Awaited<ReturnType<typeof getConversationMessages>>[number];
@@ -27,6 +27,11 @@ type GetInboxSnapshotOptions = {
   before?: string;
   messageLimit?: number;
 };
+
+function withGroupName(conversation: ConversationPreview, groupName: string | null): ConversationPreview {
+  if (!groupName || !isGroupJid(conversation.remoteJid)) return conversation;
+  return { ...conversation, contactName: groupName };
+}
 
 function toChatMessage(message: ConversationMessage, conversation: ConversationPreview, participantNames: Map<string, string>): ChatMessageData {
   const isOutgoing = message.direction === "outbound";
@@ -79,9 +84,12 @@ export async function getInboxSnapshot(conversationId?: string, options: GetInbo
   const conversationMessages = activeConversation ? await getConversationMessages(activeConversation.id, { before: options.before, limit: messageLimit + 1 }) : [];
   const hasMoreMessages = conversationMessages.length > messageLimit;
   const visibleMessages = hasMoreMessages ? conversationMessages.slice(1) : conversationMessages;
+  const activeGroupName = visibleMessages.map((message) => getGroupNameFromMetadata("rawMetadata" in message ? message.rawMetadata : {})).find((name): name is string => Boolean(name));
+  const enrichedActiveConversation = activeConversation ? withGroupName(activeConversation, activeGroupName ?? null) : undefined;
   const participantJids = [...new Set(visibleMessages.map((message) => getGroupParticipantJid("rawMetadata" in message ? message.rawMetadata : {})).filter((jid): jid is string => Boolean(jid)))];
   const participantNames = await getParticipantNames(participantJids);
-  const messages = activeConversation ? visibleMessages.map((message) => toChatMessage(message, activeConversation, participantNames)) : [];
+  const messages = enrichedActiveConversation ? visibleMessages.map((message) => toChatMessage(message, enrichedActiveConversation, participantNames)) : [];
+  const conversationPreviews = conversations.map((conversation) => toConversationPreview(conversation.id === enrichedActiveConversation?.id ? enrichedActiveConversation : conversation));
 
-  return { conversations: conversations.map(toConversationPreview), activeConversationId: activeConversation?.id ?? null, hasMoreMessages, messages };
+  return { conversations: conversationPreviews, activeConversationId: activeConversation?.id ?? null, hasMoreMessages, messages };
 }

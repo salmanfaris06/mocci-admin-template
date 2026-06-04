@@ -66,6 +66,33 @@ export function getConversationSourceLabel(conversation: ConversationIdentity) {
   return firstNonEmpty(formatWhatsAppNumber(conversation.phone), formatWhatsAppNumber(conversation.remoteJid), conversation.remoteJid) ?? conversation.remoteJid;
 }
 
+export function getGroupNameFromMetadata(rawMetadata: unknown) {
+  return firstNonEmpty(
+    readString(rawMetadata, [
+      ["raw", "data", "groupMetadata", "subject"],
+      ["raw", "groupMetadata", "subject"],
+      ["data", "groupMetadata", "subject"],
+      ["groupMetadata", "subject"],
+      ["raw", "data", "group", "subject"],
+      ["raw", "group", "subject"],
+      ["data", "group", "subject"],
+      ["group", "subject"],
+      ["raw", "data", "chat", "name"],
+      ["raw", "chat", "name"],
+      ["data", "chat", "name"],
+      ["chat", "name"],
+      ["raw", "data", "chatName"],
+      ["raw", "chatName"],
+      ["data", "chatName"],
+      ["chatName"],
+      ["raw", "data", "groupName"],
+      ["raw", "groupName"],
+      ["data", "groupName"],
+      ["groupName"],
+    ]),
+  );
+}
+
 export function getGroupParticipantJid(rawMetadata: unknown) {
   return readString(rawMetadata, [
     ["raw", "data", "key", "participant"],

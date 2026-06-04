@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatWhatsAppNumber, getConversationContactLabel, getConversationSourceLabel, getInboundSenderId, getInboundSenderName } from "./whatsapp-display";
+import { formatWhatsAppNumber, getConversationContactLabel, getConversationSourceLabel, getGroupNameFromMetadata, getInboundSenderId, getInboundSenderName } from "./whatsapp-display";
 
 describe("formatWhatsAppNumber", () => {
   it("formats a one-to-one WhatsApp JID as a clean phone number", () => {
@@ -19,6 +19,31 @@ describe("getConversationContactLabel", () => {
 
   it("falls back to the WhatsApp phone number when no name is available", () => {
     expect(getConversationContactLabel({ contactName: null, phone: null, remoteJid: "628123@s.whatsapp.net" })).toBe("628123");
+  });
+});
+
+describe("getGroupNameFromMetadata", () => {
+  it("reads the group subject from Evolution metadata", () => {
+    expect(
+      getGroupNameFromMetadata({
+        data: {
+          key: { remoteJid: "120363123456789@g.us" },
+          pushName: "Gema",
+          groupMetadata: { subject: "Mocci Support Group" },
+        },
+      }),
+    ).toBe("Mocci Support Group");
+  });
+
+  it("ignores participant push names as group names", () => {
+    expect(
+      getGroupNameFromMetadata({
+        data: {
+          key: { remoteJid: "120363123456789@g.us" },
+          pushName: "Gema",
+        },
+      }),
+    ).toBeNull();
   });
 });
 

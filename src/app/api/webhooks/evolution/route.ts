@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import { contacts, conversations, messages, webhookEvents } from "@/server/db/schema";
+import { getGroupNameFromMetadata, isGroupJid } from "../../../../server/crm/whatsapp-display";
 
 function readPath(value: unknown, path: string[]) {
   let cursor = value;
@@ -97,7 +98,7 @@ function idempotencyKey(payload: unknown, pathEvent?: string) {
 }
 
 async function upsertContact(remoteJid: string, payload: unknown) {
-  const displayName = getPushName(payload);
+  const displayName = isGroupJid(remoteJid) ? getGroupNameFromMetadata(payload) : getPushName(payload);
   const [contact] = await db
     .insert(contacts)
     .values({
