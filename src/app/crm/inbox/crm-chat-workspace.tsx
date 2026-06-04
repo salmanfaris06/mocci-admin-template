@@ -120,9 +120,9 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
   }, [refreshInbox, selectedConversationId]);
 
   return (
-    <Card className="overflow-hidden p-0">
-      <CardContent className="grid min-h-[720px] p-0 lg:grid-cols-[360px_1fr]">
-        <aside className="border-border border-b bg-muted/20 lg:border-r lg:border-b-0">
+    <Card className="h-[calc(100vh-12rem)] min-h-[560px] overflow-hidden p-0">
+      <CardContent className="grid h-full min-h-0 p-0 lg:grid-cols-[360px_1fr]">
+        <aside className="flex min-h-0 flex-col border-border border-b bg-muted/20 lg:border-r lg:border-b-0">
           <div className="border-border border-b p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -133,7 +133,7 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
             </div>
           </div>
 
-          <div className="max-h-[650px] overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             {conversations.length === 0 ? (
               <div className="rounded-xl border border-dashed p-6 text-center text-muted-foreground text-sm">No conversations yet.</div>
             ) : (
@@ -171,7 +171,7 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
           </div>
         </aside>
 
-        <section className="flex min-h-[720px] flex-col bg-background">
+        <section className="flex min-h-0 flex-col overflow-hidden bg-background">
           {activeConversation ? (
             <CrmChatThread
               contactName={activeConversation.contactName ?? activeConversation.remoteJid}
@@ -183,7 +183,7 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
               to={activeConversation.phone ?? activeConversation.remoteJid}
             />
           ) : (
-            <div className="flex flex-1 items-center justify-center p-8 text-center">
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-8 text-center">
               <div>
                 <MessageCircleIcon className="mx-auto mb-3 size-10 text-muted-foreground" />
                 <h2 className="font-medium text-lg">No CRM chats yet</h2>

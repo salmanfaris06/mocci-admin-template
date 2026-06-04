@@ -47,7 +47,7 @@ export function CrmChatThread({ contactName, conversationId, initialMessages, on
   }, [conversationId, onLocalSend, to]);
 
   return (
-    <ChatProvider className="flex min-h-[720px] flex-1 flex-col bg-background" currentUser={crmUser} theme="lunar">
+    <ChatProvider className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background" currentUser={crmUser} theme="lunar">
       <header className="flex flex-col gap-4 border-border border-b p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
@@ -63,7 +63,7 @@ export function CrmChatThread({ contactName, conversationId, initialMessages, on
       {messages.length > 0 ? (
         <ChatMessages className="min-h-0 flex-1" messages={messages} />
       ) : (
-        <div className="flex flex-1 items-center justify-center p-8 text-center">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-8 text-center">
           <div>
             <MessageCircleIcon className="mx-auto mb-3 size-10 text-muted-foreground" />
             <h3 className="font-medium">No messages in this thread</h3>
