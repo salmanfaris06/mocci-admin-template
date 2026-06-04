@@ -67,7 +67,7 @@ export class EvolutionClient {
         enabled: true,
         url: webhookUrl,
         webhookByEvents: false,
-        base64: false,
+        webhookBase64: false,
         events: defaultWebhookEvents,
       }),
     });

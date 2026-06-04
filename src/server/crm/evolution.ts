@@ -86,7 +86,7 @@ export async function createEvolutionInstance() {
   const response = await client.createInstance(settings.webhookUrl);
 
   if (settings.webhookUrl) {
-    await client.setWebhook(settings.webhookUrl).catch(() => undefined);
+    await client.setWebhook(settings.webhookUrl);
   }
 
   return response;
@@ -97,7 +97,7 @@ export async function connectEvolutionInstance() {
   const client = new EvolutionClient(settings);
 
   if (settings.webhookUrl) {
-    await client.setWebhook(settings.webhookUrl).catch(() => undefined);
+    await client.setWebhook(settings.webhookUrl);
   }
 
   return extractQrCodeData(await client.connectInstance());
@@ -133,7 +133,7 @@ export async function testEvolutionConnection() {
   const client = new EvolutionClient(settings);
 
   if (settings.webhookUrl) {
-    await client.setWebhook(settings.webhookUrl).catch(() => undefined);
+    await client.setWebhook(settings.webhookUrl);
   }
 
   const connectionState = await client.getConnectionState();
