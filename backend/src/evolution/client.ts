@@ -10,6 +10,7 @@ const defaultWebhookEvents = [
 ];
 
 type EvolutionRequestOptions = {
+  idempotentAlreadyExistsMessage?: string;
   idempotentConnectionClosedMessage?: string;
   idempotentNotFoundMessage?: string;
 };
@@ -30,6 +31,9 @@ export class EvolutionClient {
       });
       if (!response.ok) {
         const bodyText = await response.text();
+        if (requestOptions.idempotentAlreadyExistsMessage && bodyText.toLowerCase().includes("already in use")) {
+          return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentAlreadyExistsMessage } };
+        }
         if (requestOptions.idempotentConnectionClosedMessage && bodyText.toLowerCase().includes("connection closed")) {
           return { status: "SUCCESS", error: false, response: { message: requestOptions.idempotentConnectionClosedMessage } };
         }
@@ -58,25 +62,29 @@ export class EvolutionClient {
   }
 
   createInstance(webhookUrl?: string) {
-    return this.request("/instance/create", {
-      method: "POST",
-      body: JSON.stringify({
-        instanceName: this.options.instanceName,
-        integration: "WHATSAPP-BAILEYS",
-        qrcode: true,
-        webhook: webhookUrl
-          ? {
-              enabled: true,
-              url: webhookUrl,
-              byEvents: false,
-              base64: false,
-              webhookByEvents: false,
-              webhookBase64: false,
-              events: defaultWebhookEvents,
-            }
-          : undefined,
-      }),
-    });
+    return this.request(
+      "/instance/create",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          instanceName: this.options.instanceName,
+          integration: "WHATSAPP-BAILEYS",
+          qrcode: true,
+          webhook: webhookUrl
+            ? {
+                enabled: true,
+                url: webhookUrl,
+                byEvents: false,
+                base64: false,
+                webhookByEvents: false,
+                webhookBase64: false,
+                events: defaultWebhookEvents,
+              }
+            : undefined,
+        }),
+      },
+      { idempotentAlreadyExistsMessage: "Instance already exists" },
+    );
   }
 
   connectInstance() {

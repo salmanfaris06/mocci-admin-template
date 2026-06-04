@@ -70,6 +70,18 @@ describe("EvolutionClient", () => {
     await expect(client.connectInstance()).rejects.toThrow("reading 'instanceId'");
   });
 
+  it("treats an existing instance name as an idempotent create", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: 403, error: "Forbidden", response: { message: ['This name "main" is already in use.'] } }), { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({ baseUrl: "https://evolution.example", apiKey: "secret", instanceName: "main" });
+
+    await expect(client.createInstance()).resolves.toMatchObject({
+      status: "SUCCESS",
+      response: { message: "Instance already exists" },
+    });
+  });
+
   it("treats missing instance delete as an idempotent delete", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: 404, error: "Not Found", response: { message: ["instance does not exist"] } }), { status: 404 }));
     vi.stubGlobal("fetch", fetchMock);
