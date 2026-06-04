@@ -88,7 +88,7 @@ export async function createEvolutionInstance() {
     const response = await client.createInstance(settings.webhookUrl);
 
     if (settings.webhookUrl) {
-      await client.setWebhook(settings.webhookUrl);
+      await client.setWebhook(settings.webhookUrl).catch(() => undefined);
     }
 
     return response;
@@ -98,7 +98,7 @@ export async function createEvolutionInstance() {
     await client.deleteInstance();
     const response = await client.createInstance(settings.webhookUrl);
     if (settings.webhookUrl) {
-      await client.setWebhook(settings.webhookUrl);
+      await client.setWebhook(settings.webhookUrl).catch(() => undefined);
     }
     return response;
   }
