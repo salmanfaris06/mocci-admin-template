@@ -92,6 +92,10 @@ export async function createEvolutionInstance() {
   return response;
 }
 
+function isBrokenEvolutionInstanceError(error: unknown) {
+  return error instanceof Error && error.message.includes("reading 'instanceId'");
+}
+
 export async function connectEvolutionInstance() {
   const settings = await getEvolutionSettings();
   const client = new EvolutionClient(settings);
@@ -100,7 +104,18 @@ export async function connectEvolutionInstance() {
     await client.setWebhook(settings.webhookUrl);
   }
 
-  return extractQrCodeData(await client.connectInstance());
+  try {
+    return extractQrCodeData(await client.connectInstance());
+  } catch (error) {
+    if (!isBrokenEvolutionInstanceError(error)) throw error;
+
+    await client.deleteInstance();
+    await client.createInstance(settings.webhookUrl);
+    if (settings.webhookUrl) {
+      await client.setWebhook(settings.webhookUrl);
+    }
+    return extractQrCodeData(await client.connectInstance());
+  }
 }
 
 function getStringField(value: unknown, path: string[]) {
