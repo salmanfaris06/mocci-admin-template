@@ -5,6 +5,12 @@ type ConversationIdentity = {
 };
 
 type MessageIdentity = ConversationIdentity & {
+  participantContactName?: string | null;
+  rawMetadata: unknown;
+};
+
+type SenderIdentity = {
+  remoteJid: string;
   rawMetadata: unknown;
 };
 
@@ -39,8 +45,13 @@ export function formatWhatsAppNumber(value: string | null | undefined) {
   return candidate || null;
 }
 
+function isMeaningfulLabel(value: string) {
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized !== "." && normalized !== "-";
+}
+
 function firstNonEmpty(...values: Array<string | null | undefined>) {
-  return values.find((value) => typeof value === "string" && value.trim())?.trim() ?? null;
+  return values.find((value) => typeof value === "string" && isMeaningfulLabel(value))?.trim() ?? null;
 }
 
 export function getConversationContactLabel(conversation: ConversationIdentity) {
@@ -55,7 +66,7 @@ export function getConversationSourceLabel(conversation: ConversationIdentity) {
   return firstNonEmpty(formatWhatsAppNumber(conversation.phone), formatWhatsAppNumber(conversation.remoteJid), conversation.remoteJid) ?? conversation.remoteJid;
 }
 
-function getGroupParticipantJid(rawMetadata: unknown) {
+export function getGroupParticipantJid(rawMetadata: unknown) {
   return readString(rawMetadata, [
     ["raw", "data", "key", "participant"],
     ["raw", "data", "participant"],
@@ -85,10 +96,18 @@ function getPayloadPushName(rawMetadata: unknown) {
   ]);
 }
 
+export function getInboundSenderId(message: SenderIdentity) {
+  if (isGroupJid(message.remoteJid)) {
+    return getGroupParticipantJid(message.rawMetadata) ?? message.remoteJid;
+  }
+
+  return message.remoteJid;
+}
+
 export function getInboundSenderName(message: MessageIdentity) {
   if (isGroupJid(message.remoteJid)) {
     const participantJid = getGroupParticipantJid(message.rawMetadata);
-    return firstNonEmpty(getPayloadPushName(message.rawMetadata), formatWhatsAppNumber(participantJid), participantJid, `Grup: ${message.remoteJid}`) ?? `Grup: ${message.remoteJid}`;
+    return firstNonEmpty(getPayloadPushName(message.rawMetadata), message.participantContactName, formatWhatsAppNumber(participantJid), participantJid, `Grup: ${message.remoteJid}`) ?? `Grup: ${message.remoteJid}`;
   }
 
   return getConversationContactLabel(message);

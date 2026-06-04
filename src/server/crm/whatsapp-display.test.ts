@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatWhatsAppNumber, getConversationContactLabel, getConversationSourceLabel, getInboundSenderName } from "./whatsapp-display";
+import { formatWhatsAppNumber, getConversationContactLabel, getConversationSourceLabel, getInboundSenderId, getInboundSenderName } from "./whatsapp-display";
 
 describe("formatWhatsAppNumber", () => {
   it("formats a one-to-one WhatsApp JID as a clean phone number", () => {
@@ -50,5 +50,53 @@ describe("getInboundSenderName", () => {
         rawMetadata: { data: { key: { participant: "628987654321@s.whatsapp.net" } } },
       }),
     ).toBe("628987654321");
+  });
+
+  it("uses the participant contact name when the group push name is a placeholder", () => {
+    expect(
+      getInboundSenderName({
+        contactName: "Sales Group",
+        participantContactName: "Gema",
+        phone: null,
+        remoteJid: "120363123456789@g.us",
+        rawMetadata: {
+          data: {
+            key: { participant: "628987654321@s.whatsapp.net" },
+            pushName: ".",
+          },
+        },
+      }),
+    ).toBe("Gema");
+  });
+
+  it("ignores placeholder push names for group messages", () => {
+    expect(
+      getInboundSenderName({
+        contactName: "Sales Group",
+        phone: null,
+        remoteJid: "120363123456789@g.us",
+        rawMetadata: {
+          data: {
+            key: { participant: "628987654321@s.whatsapp.net" },
+            pushName: ".",
+          },
+        },
+      }),
+    ).toBe("628987654321");
+  });
+});
+
+describe("getInboundSenderId", () => {
+  it("uses the participant JID for group messages so different senders create different bubbles", () => {
+    expect(
+      getInboundSenderId({
+        remoteJid: "120363123456789@g.us",
+        rawMetadata: { data: { key: { participant: "628987654321@s.whatsapp.net" } } },
+      }),
+    ).toBe("628987654321@s.whatsapp.net");
+  });
+
+  it("falls back to the remote JID for direct messages", () => {
+    expect(getInboundSenderId({ remoteJid: "628123@s.whatsapp.net", rawMetadata: {} })).toBe("628123@s.whatsapp.net");
   });
 });
