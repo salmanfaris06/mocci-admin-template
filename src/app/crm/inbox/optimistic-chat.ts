@@ -21,7 +21,7 @@ export function createOptimisticMessage({ id, now, senderId, senderName, text }:
 
 type ConversationPreview = {
   id: string;
-  lastMessageAt: Date | null;
+  lastMessageAt: Date | string | null;
   lastMessageSummary: string | null;
 };
 

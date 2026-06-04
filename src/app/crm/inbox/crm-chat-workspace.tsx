@@ -14,7 +14,7 @@ import { promoteConversationPreview, selectConversationPreview } from "./optimis
 type ConversationPreview = {
   id: string;
   contactName: string | null;
-  lastMessageAt: Date | null;
+  lastMessageAt: Date | string | null;
   lastMessageSummary: string | null;
   phone: string | null;
   remoteJid: string;
@@ -32,15 +32,37 @@ type InboxSnapshot = {
   messages: ChatMessageData[];
 };
 
-function formatTime(value: Date | null) {
-  if (!value) return "No activity";
+function toDate(value: Date | string | number | null | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeSnapshot(snapshot: InboxSnapshot): InboxSnapshot {
+  return {
+    ...snapshot,
+    conversations: snapshot.conversations.map((conversation) => ({
+      ...conversation,
+      lastMessageAt: toDate(conversation.lastMessageAt),
+    })),
+    messages: snapshot.messages.map((message) => ({
+      ...message,
+      timestamp: toDate(message.timestamp) ?? new Date(0),
+    })),
+  };
+}
+
+function formatTime(value: Date | string | null) {
+  const date = toDate(value);
+  if (!date) return "No activity";
 
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     month: "short",
-  }).format(value);
+    timeZone: "Asia/Jakarta",
+  }).format(date);
 }
 
 export function CrmChatWorkspace({ initialActiveConversationId, initialConversations, initialMessages }: CrmChatWorkspaceProps) {
@@ -61,9 +83,10 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
           return response.json() as Promise<InboxSnapshot>;
         })
         .then((snapshot) => {
-          setConversations(snapshot.conversations);
-          setSelectedConversationId(snapshot.activeConversationId);
-          setMessages(snapshot.messages);
+          const normalizedSnapshot = normalizeSnapshot(snapshot);
+          setConversations(normalizedSnapshot.conversations);
+          setSelectedConversationId(normalizedSnapshot.activeConversationId);
+          setMessages(normalizedSnapshot.messages);
         })
         .catch((error) => {
           console.error(error);
