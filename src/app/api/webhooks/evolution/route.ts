@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import { contacts, conversations, messages, webhookEvents } from "@/server/db/schema";
+import { triggerAiWhatsAppReply } from "../../../../server/crm/ai-reply";
 import { getGroupNameFromMetadata, isGroupJid } from "../../../../server/crm/whatsapp-display";
 
 function readPath(value: unknown, path: string[]) {
@@ -150,7 +151,7 @@ async function processSingleMessage(payload: unknown) {
   const conversation = await getOrCreateConversation(contact.id, text, now);
   const fromMe = getIsFromMe(payload);
 
-  await db
+  const [inboundMessage] = await db
     .insert(messages)
     .values({
       conversationId: conversation.id,
@@ -163,7 +164,8 @@ async function processSingleMessage(payload: unknown) {
       status: fromMe ? "sent" : "received",
       sentAt: now,
     })
-    .onConflictDoNothing({ target: messages.evolutionMessageId });
+    .onConflictDoNothing({ target: messages.evolutionMessageId })
+    .returning();
 
   await db
     .update(conversations)
@@ -174,6 +176,12 @@ async function processSingleMessage(payload: unknown) {
       updatedAt: now,
     })
     .where(eq(conversations.id, conversation.id));
+
+  if (!fromMe && inboundMessage && !isGroupJid(remoteJid)) {
+    await triggerAiWhatsAppReply({ contactId: contact.id, conversationId: conversation.id, inboundMessageId: inboundMessage.id, remoteJid, text }).catch((error) => {
+      console.error(error);
+    });
+  }
 
   return true;
 }

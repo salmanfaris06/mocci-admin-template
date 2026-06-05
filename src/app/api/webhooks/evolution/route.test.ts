@@ -22,6 +22,10 @@ vi.mock("drizzle-orm", () => ({
   eq: (left: unknown, right: unknown) => ({ type: "eq", left, right }),
 }));
 
+vi.mock("../../../../server/crm/ai-reply", () => ({
+  triggerAiWhatsAppReply: vi.fn(async () => ({ skipped: "test" })),
+}));
+
 vi.mock("@/server/db", () => ({
   db: {
     insert: vi.fn((table: unknown) => ({
@@ -30,7 +34,7 @@ vi.mock("@/server/db", () => ({
         if (table && typeof table === "object" && "evolutionMessageId" in table) insertedMessages.push(value);
         if (table && typeof table === "object" && "idempotencyKey" in table) insertedWebhookEvents.push(value);
         return {
-          onConflictDoNothing: () => ({ returning: async () => [] }),
+          onConflictDoNothing: () => ({ returning: async () => [{ id: "message-1", ...value }] }),
           onConflictDoUpdate: () => ({
             returning: async () => [{ id: "contact-1", ...value }],
           }),
