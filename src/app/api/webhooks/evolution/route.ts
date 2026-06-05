@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import { contacts, conversations, messages, webhookEvents } from "@/server/db/schema";
+import { getEvolutionIsFromMe } from "./evolution-message";
 import { triggerAiWhatsAppReply } from "../../../../server/crm/ai-reply";
 import { getWhatsAppAiReplyEligibility } from "../../../../server/crm/whatsapp-ai-eligibility";
 import { getGroupNameFromMetadata, isGroupJid } from "../../../../server/crm/whatsapp-display";
@@ -72,10 +73,6 @@ function getMessageType(payload: unknown) {
   if ("audioMessage" in message) return "audio";
   if ("documentMessage" in message) return "document";
   return "unknown";
-}
-
-function getIsFromMe(payload: unknown) {
-  return readPath(payload, ["raw", "data", "key", "fromMe"]) === true || readPath(payload, ["raw", "key", "fromMe"]) === true || readPath(payload, ["data", "key", "fromMe"]) === true || readPath(payload, ["key", "fromMe"]) === true;
 }
 
 function messagePayloads(payload: unknown) {
@@ -150,7 +147,7 @@ async function processSingleMessage(payload: unknown) {
   const now = new Date();
   const contact = await upsertContact(remoteJid, payload);
   const conversation = await getOrCreateConversation(contact.id, text, now);
-  const fromMe = getIsFromMe(payload);
+  const fromMe = getEvolutionIsFromMe(payload);
 
   const [inboundMessage] = await db
     .insert(messages)
