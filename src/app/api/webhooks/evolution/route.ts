@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { contacts, conversations, messages, webhookEvents } from "@/server/db/schema";
 import { triggerAiWhatsAppReply } from "../../../../server/crm/ai-reply";
+import { getWhatsAppAiReplyEligibility } from "../../../../server/crm/whatsapp-ai-eligibility";
 import { getGroupNameFromMetadata, isGroupJid } from "../../../../server/crm/whatsapp-display";
 
 function readPath(value: unknown, path: string[]) {
@@ -177,7 +178,8 @@ async function processSingleMessage(payload: unknown) {
     })
     .where(eq(conversations.id, conversation.id));
 
-  if (!fromMe && inboundMessage && !isGroupJid(remoteJid)) {
+  const aiEligibility = getWhatsAppAiReplyEligibility({ fromMe, inboundMessageInserted: Boolean(inboundMessage), remoteJid });
+  if (aiEligibility.shouldReply && inboundMessage) {
     await triggerAiWhatsAppReply({ contactId: contact.id, conversationId: conversation.id, inboundMessageId: inboundMessage.id, remoteJid, text })
       .then((result) => {
         if (result.skipped) console.info("WhatsApp AI auto-reply skipped", result);
@@ -185,6 +187,8 @@ async function processSingleMessage(payload: unknown) {
       .catch((error) => {
         console.error("WhatsApp AI auto-reply failed", error);
       });
+  } else {
+    console.info("WhatsApp AI auto-reply skipped", aiEligibility);
   }
 
   return true;
