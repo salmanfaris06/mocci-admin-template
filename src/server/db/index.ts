@@ -24,8 +24,9 @@ function createPostgresClient() {
   return postgres(getConnectionString(), {
     prepare: false,
     max: Number(process.env.DATABASE_MAX_CONNECTIONS ?? 1),
-    idle_timeout: 20,
+    idle_timeout: 5,
     connect_timeout: 10,
+    max_lifetime: 60,
   });
 }
 

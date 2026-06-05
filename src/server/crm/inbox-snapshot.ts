@@ -77,17 +77,38 @@ async function getParticipantNames(participantJids: string[]) {
   return new Map(rows.flatMap((contact) => (contact.displayName ? [[contact.remoteJid, contact.displayName] as const] : [])));
 }
 
+async function safeGetRecentConversations() {
+  try {
+    return await getRecentConversations(50);
+  } catch (error) {
+    console.error("Failed to load inbox conversations", error);
+    return [];
+  }
+}
+
+async function safeGetConversationMessages(conversationId: string, options: { before?: string; limit: number }) {
+  try {
+    return await getConversationMessages(conversationId, options);
+  } catch (error) {
+    console.error("Failed to load inbox messages", error);
+    return [];
+  }
+}
+
 export async function getInboxSnapshot(conversationId?: string, options: GetInboxSnapshotOptions = {}) {
   const messageLimit = options.messageLimit ?? 50;
-  const conversations = await getRecentConversations(50);
+  const conversations = await safeGetRecentConversations();
   const activeConversation = conversations.find((conversation) => conversation.id === conversationId) ?? conversations[0];
-  const conversationMessages = activeConversation ? await getConversationMessages(activeConversation.id, { before: options.before, limit: messageLimit + 1 }) : [];
+  const conversationMessages = activeConversation ? await safeGetConversationMessages(activeConversation.id, { before: options.before, limit: messageLimit + 1 }) : [];
   const hasMoreMessages = conversationMessages.length > messageLimit;
   const visibleMessages = hasMoreMessages ? conversationMessages.slice(1) : conversationMessages;
   const activeGroupName = visibleMessages.map((message) => getGroupNameFromMetadata("rawMetadata" in message ? message.rawMetadata : {})).find((name): name is string => Boolean(name));
   const enrichedActiveConversation = activeConversation ? withGroupName(activeConversation, activeGroupName ?? null) : undefined;
   const participantJids = [...new Set(visibleMessages.map((message) => getGroupParticipantJid("rawMetadata" in message ? message.rawMetadata : {})).filter((jid): jid is string => Boolean(jid)))];
-  const participantNames = await getParticipantNames(participantJids);
+  const participantNames = await getParticipantNames(participantJids).catch((error) => {
+    console.error("Failed to load group participant names", error);
+    return new Map<string, string>();
+  });
   const messages = enrichedActiveConversation ? visibleMessages.map((message) => toChatMessage(message, enrichedActiveConversation, participantNames)) : [];
   const conversationPreviews = conversations.map((conversation) => toConversationPreview(conversation.id === enrichedActiveConversation?.id ? enrichedActiveConversation : conversation));
 
