@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   jsonb,
   numeric,
@@ -80,7 +81,10 @@ export const conversations = pgTable("conversations", {
   lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
   unreadCount: integer("unread_count").default(0).notNull(),
   ...timestamps,
-});
+}, (table) => [
+  index("conversations_last_message_at_idx").on(table.lastMessageAt),
+  index("conversations_contact_id_idx").on(table.contactId),
+]);
 
 export const messages = pgTable("messages", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -97,7 +101,10 @@ export const messages = pgTable("messages", {
   status: text("status").default("received").notNull(),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   ...timestamps,
-}, (table) => [uniqueIndex("messages_evolution_message_id_idx").on(table.evolutionMessageId)]);
+}, (table) => [
+  uniqueIndex("messages_evolution_message_id_idx").on(table.evolutionMessageId),
+  index("messages_conversation_created_at_idx").on(table.conversationId, table.createdAt),
+]);
 
 export const aiAgents = pgTable("ai_agents", {
   id: uuid("id").primaryKey().defaultRandom(),
