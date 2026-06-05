@@ -19,16 +19,30 @@ async function getOpenAiApiKey() {
     .orderBy(desc(aiProviderKeys.isDefault), desc(aiProviderKeys.updatedAt))
     .limit(1);
 
-  if (storedKey) {
-    if (!encryptionKey) throw new Error("SECRETS_ENCRYPTION_KEY is required to read stored OpenAI credentials");
-    return decryptSecret(storedKey.encryptedApiKey, encryptionKey);
-  }
-
+  if (storedKey && encryptionKey) return decryptSecret(storedKey.encryptedApiKey, encryptionKey);
   if (process.env.OPENAI_API_KEY) return process.env.OPENAI_API_KEY;
+  if (storedKey && !encryptionKey) throw new Error("SECRETS_ENCRYPTION_KEY is required to read stored OpenAI credentials");
   throw new Error("OpenAI API key is not configured");
 }
 
-async function getDefaultAgent() {
+type AiAgentConfig = {
+  id: string;
+  maxOutputTokens: number;
+  modelId: string;
+  systemPrompt: string;
+  temperature: string | number;
+};
+
+const fallbackAgentDefaults = {
+  maxOutputTokens: 800,
+  modelId: process.env.OPENAI_MODEL_ID ?? "gpt-4.1-mini",
+  systemPrompt:
+    process.env.WHATSAPP_AI_SYSTEM_PROMPT ??
+    "You are a helpful WhatsApp customer service assistant. Answer clearly, briefly, and politely in the customer's language. Ask one clarifying question when needed.",
+  temperature: process.env.WHATSAPP_AI_TEMPERATURE ?? "0.70",
+};
+
+async function getDefaultAgent(): Promise<AiAgentConfig> {
   const [agent] = await db
     .select()
     .from(aiAgents)
@@ -36,7 +50,21 @@ async function getDefaultAgent() {
     .orderBy(desc(aiAgents.isDefault), desc(aiAgents.updatedAt))
     .limit(1);
 
-  return agent;
+  if (agent) return agent;
+
+  const [createdAgent] = await db
+    .insert(aiAgents)
+    .values({
+      name: "Customer Service Agent",
+      isActive: true,
+      isDefault: true,
+      provider: "openai",
+      ...fallbackAgentDefaults,
+      fallbackTimeoutMessage: "Maaf, sistem AI sedang sibuk. Tim kami akan segera membantu Anda.",
+    })
+    .returning();
+
+  return createdAgent;
 }
 
 async function getConversationContext(conversationId: string) {
@@ -73,10 +101,9 @@ export async function triggerAiWhatsAppReply(input: TriggerAiWhatsAppReplyInput)
     .where(eq(conversations.id, input.conversationId))
     .limit(1);
 
-  if (!conversation || conversation.aiStatus !== "enabled" || !conversation.contactAiEnabled) return { skipped: "ai-disabled" as const };
+  if (!conversation || conversation.aiStatus === "disabled" || conversation.aiStatus === "processing" || !conversation.contactAiEnabled) return { skipped: "ai-disabled" as const };
 
   const agent = await getDefaultAgent();
-  if (!agent) return { skipped: "no-agent" as const };
 
   const startedAt = Date.now();
   const [run] = await db
