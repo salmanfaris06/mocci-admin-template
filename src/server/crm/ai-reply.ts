@@ -5,6 +5,7 @@ import { generateText } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 
 import { getEvolutionClient } from "@/server/crm/evolution";
+import { formatWhatsAppNumber } from "@/server/crm/whatsapp-display";
 import { db } from "@/server/db";
 import { aiAgents, aiProviderKeys, aiRuns, contacts, conversations, messages } from "@/server/db/schema";
 import { decryptSecret } from "@/server/security/crypto";
@@ -136,7 +137,8 @@ export async function triggerAiWhatsAppReply(input: TriggerAiWhatsAppReplyInput)
 
     const client = await getEvolutionClient();
     const sentAt = new Date();
-    const evolutionResponse = await client.sendTextMessage(input.remoteJid, replyText);
+    const to = formatWhatsAppNumber(input.remoteJid) ?? input.remoteJid;
+    const evolutionResponse = await client.sendTextMessage(to, replyText);
 
     const [outputMessage] = await db
       .insert(messages)

@@ -44,6 +44,25 @@ export async function getCrmDebugData() {
     connectionState: process.env.EVOLUTION_BASE_URL && process.env.EVOLUTION_INSTANCE_NAME && process.env.EVOLUTION_API_KEY ? "Configured from environment" : "Evolution env not configured",
   };
   const webhookLogs = await safeQuery(() => db.select().from(webhookEvents).orderBy(desc(webhookEvents.createdAt)).limit(50));
+  const recentAiRuns = await safeQuery(() =>
+    db
+      .select({
+        id: aiRuns.id,
+        status: aiRuns.status,
+        latencyMs: aiRuns.latencyMs,
+        generatedResponse: aiRuns.generatedResponse,
+        errorMessage: aiRuns.errorMessage,
+        createdAt: aiRuns.createdAt,
+        conversationId: aiRuns.conversationId,
+        contactName: contacts.displayName,
+        remoteJid: contacts.remoteJid,
+      })
+      .from(aiRuns)
+      .innerJoin(conversations, sql`${aiRuns.conversationId} = ${conversations.id}`)
+      .innerJoin(contacts, sql`${conversations.contactId} = ${contacts.id}`)
+      .orderBy(desc(aiRuns.createdAt))
+      .limit(25)
+  );
   const recentMessages = await safeQuery(() =>
     db
       .select({
@@ -93,6 +112,8 @@ export async function getCrmDebugData() {
     settingsError: null,
     webhookLogs: webhookLogs.data ?? [],
     webhookLogsError: webhookLogs.error,
+    recentAiRuns: recentAiRuns.data ?? [],
+    recentAiRunsError: recentAiRuns.error,
     recentMessages: recentMessages.data ?? [],
     recentMessagesError: recentMessages.error,
     counts: counts.data ?? {},

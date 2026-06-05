@@ -178,9 +178,13 @@ async function processSingleMessage(payload: unknown) {
     .where(eq(conversations.id, conversation.id));
 
   if (!fromMe && inboundMessage && !isGroupJid(remoteJid)) {
-    await triggerAiWhatsAppReply({ contactId: contact.id, conversationId: conversation.id, inboundMessageId: inboundMessage.id, remoteJid, text }).catch((error) => {
-      console.error(error);
-    });
+    await triggerAiWhatsAppReply({ contactId: contact.id, conversationId: conversation.id, inboundMessageId: inboundMessage.id, remoteJid, text })
+      .then((result) => {
+        if (result.skipped) console.info("WhatsApp AI auto-reply skipped", result);
+      })
+      .catch((error) => {
+        console.error("WhatsApp AI auto-reply failed", error);
+      });
   }
 
   return true;

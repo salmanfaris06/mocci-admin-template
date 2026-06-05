@@ -1,4 +1,4 @@
-import { BugIcon, DatabaseIcon, LinkIcon, MessageSquareIcon, WebhookIcon } from "lucide-react";
+import { BotIcon, BugIcon, DatabaseIcon, LinkIcon, MessageSquareIcon, WebhookIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/showcase";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,7 @@ export default async function CrmDebugPage() {
         <TabsList className="flex w-full flex-wrap justify-start">
           <TabsTrigger value="webhooks"><WebhookIcon /> Webhook Logs</TabsTrigger>
           <TabsTrigger value="messages"><MessageSquareIcon /> Message Processing</TabsTrigger>
+          <TabsTrigger value="ai-runs"><BotIcon /> AI Runs</TabsTrigger>
           <TabsTrigger value="evolution"><LinkIcon /> Evolution Connection</TabsTrigger>
           <TabsTrigger value="database"><DatabaseIcon /> Database Health</TabsTrigger>
         </TabsList>
@@ -126,6 +127,35 @@ export default async function CrmDebugPage() {
               ))
             ) : (
               <Card><CardContent className="py-8 text-sm text-muted-foreground">No processed messages yet. If webhook logs exist, check whether processedMessages is 0 or payload lacks remoteJid/message id.</CardContent></Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ai-runs" className="space-y-4">
+          <ErrorCard message={debug.recentAiRunsError} />
+          <div className="grid gap-3">
+            {debug.recentAiRuns.length ? (
+              debug.recentAiRuns.map((run) => (
+                <Card key={run.id}>
+                  <CardHeader className="gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <CardTitle className="text-base">{run.contactName ?? run.remoteJid}</CardTitle>
+                      <StatusBadge status={run.status} />
+                    </div>
+                    <CardDescription>{run.createdAt.toLocaleString()} · latency {run.latencyMs ?? "-"}ms</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    {run.errorMessage ? <p className="text-destructive">{run.errorMessage}</p> : null}
+                    {run.generatedResponse ? <p>{run.generatedResponse}</p> : null}
+                    <div className="grid gap-1 text-muted-foreground md:grid-cols-2">
+                      <span>Remote JID: {run.remoteJid}</span>
+                      <span>Conversation: {run.conversationId}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card><CardContent className="py-8 text-sm text-muted-foreground">No AI runs yet. If inbound personal messages exist, check whether the conversation/contact AI status is enabled.</CardContent></Card>
             )}
           </div>
         </TabsContent>
