@@ -104,6 +104,7 @@ export const messages = pgTable("messages", {
 }, (table) => [
   uniqueIndex("messages_evolution_message_id_idx").on(table.evolutionMessageId),
   index("messages_conversation_created_at_idx").on(table.conversationId, table.createdAt),
+  index("messages_created_at_idx").on(table.createdAt),
 ]);
 
 export const aiAgents = pgTable("ai_agents", {
@@ -134,7 +135,7 @@ export const aiRuns = pgTable("ai_runs", {
   generatedResponse: text("generated_response"),
   errorMessage: text("error_message"),
   ...timestamps,
-});
+}, (table) => [index("ai_runs_created_at_idx").on(table.createdAt)]);
 
 export const aiUsageLogs = pgTable("ai_usage_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -182,7 +183,10 @@ export const webhookEvents = pgTable("webhook_events", {
   rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>().notNull(),
   errorMessage: text("error_message"),
   ...timestamps,
-}, (table) => [uniqueIndex("webhook_events_idempotency_key_idx").on(table.idempotencyKey)]);
+}, (table) => [
+  uniqueIndex("webhook_events_idempotency_key_idx").on(table.idempotencyKey),
+  index("webhook_events_created_at_idx").on(table.createdAt),
+]);
 
 export const jobs = pgTable("jobs", {
   id: uuid("id").primaryKey().defaultRandom(),

@@ -15,6 +15,13 @@
       "when": 1780647503568,
       "tag": "0001_inbox_performance_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780655472980,
+      "tag": "0002_illegal_harry_osborn",
+      "breakpoints": true
     }
   ]
 }
