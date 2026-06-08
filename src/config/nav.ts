@@ -1,7 +1,6 @@
 import {
   BarChart3Icon,
   BotIcon,
-  BugIcon,
   GaugeIcon,
   KanbanIcon,
   MessageSquareIcon,
@@ -18,8 +17,7 @@ const crmItems = [
   { title: 'Pipeline', url: '/pipeline', icon: KanbanIcon },
   { title: 'AI Agent', url: '/ai-agent', icon: BotIcon },
   { title: 'Analytics', url: '/analytics', icon: BarChart3Icon },
-  { title: 'API Settings', url: '/api-settings', icon: SettingsIcon },
-  { title: 'Debug & Logs', url: '/debug', icon: BugIcon }
+  { title: 'API Settings', url: '/api-settings', icon: SettingsIcon }
 ]
 
 export const crmNav: NavConfig = {
