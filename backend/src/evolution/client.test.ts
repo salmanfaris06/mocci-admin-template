@@ -97,6 +97,45 @@ describe("EvolutionClient", () => {
     });
   });
 
+  it("finds contacts, chats, and messages through Chat API wrappers", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ records: [] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main sales",
+    });
+
+    await client.findContacts({
+      where: { remoteJid: "628123@s.whatsapp.net" },
+      limit: 10,
+    });
+    await client.findChats({ limit: 5 });
+    await client.findMessages({
+      where: { key: { remoteJid: "628123@s.whatsapp.net" } },
+      limit: 20,
+    });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://evolution.example/chat/findContacts/main%20sales",
+      "https://evolution.example/chat/findChats/main%20sales",
+      "https://evolution.example/chat/findMessages/main%20sales",
+    ]);
+    expect(fetchMock.mock.calls.map(([, init]) => init.method)).toEqual([
+      "POST",
+      "POST",
+      "POST",
+    ]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      where: { remoteJid: "628123@s.whatsapp.net" },
+      limit: 10,
+    });
+  });
+
   it("reads connection state without reconfiguring the webhook", async () => {
     const fetchMock = vi.fn(
       async () =>

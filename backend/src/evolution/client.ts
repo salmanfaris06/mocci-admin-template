@@ -65,6 +65,10 @@ export class EvolutionClient {
     this.baseUrl = normalizeBaseUrl(options.baseUrl);
   }
 
+  private instancePath() {
+    return encodeURIComponent(this.options.instanceName);
+  }
+
   private async request(
     path: string,
     init: RequestInit = {},
@@ -209,6 +213,27 @@ export class EvolutionClient {
   getWebhook() {
     return this.request(`/webhook/find/${this.options.instanceName}`, {
       method: "GET",
+    });
+  }
+
+  findContacts(query: Record<string, unknown> = {}) {
+    return this.request(`/chat/findContacts/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify(query),
+    });
+  }
+
+  findChats(query: Record<string, unknown> = {}) {
+    return this.request(`/chat/findChats/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify(query),
+    });
+  }
+
+  findMessages(query: Record<string, unknown> = {}) {
+    return this.request(`/chat/findMessages/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify(query),
     });
   }
 
