@@ -1,6 +1,9 @@
 import "server-only";
 
-import { EvolutionClient } from "../../../backend/src/evolution/client";
+import {
+  EvolutionClient,
+  defaultWebhookEvents,
+} from "../../../backend/src/evolution/client";
 
 function requiredEnv(name: string) {
   const value = process.env[name];
@@ -56,7 +59,11 @@ export async function configureEvolutionWebhook() {
   return client.setWebhook(settings.webhookUrl, settings.webhookSecret);
 }
 
-function readStringField(value: unknown, path: string[]): string | undefined {
+function normalizeWebhookUrl(url?: string) {
+  return url?.replace(/\/+$/, "");
+}
+
+function readField(value: unknown, path: string[]) {
   let cursor = value;
 
   for (const segment of path) {
@@ -65,7 +72,59 @@ function readStringField(value: unknown, path: string[]): string | undefined {
     cursor = (cursor as Record<string, unknown>)[segment];
   }
 
+  return cursor;
+}
+
+function readStringField(value: unknown, path: string[]): string | undefined {
+  const cursor = readField(value, path);
   return typeof cursor === "string" ? cursor : undefined;
+}
+
+function readBooleanField(value: unknown, path: string[]): boolean | undefined {
+  const cursor = readField(value, path);
+  return typeof cursor === "boolean" ? cursor : undefined;
+}
+
+function readStringArrayField(
+  value: unknown,
+  path: string[],
+): string[] | undefined {
+  const cursor = readField(value, path);
+  return Array.isArray(cursor)
+    ? cursor.filter((item): item is string => typeof item === "string")
+    : undefined;
+}
+
+function readWebhookPayload(response: unknown) {
+  const webhook = readField(response, ["webhook"]);
+  return webhook && typeof webhook === "object" ? webhook : response;
+}
+
+export async function verifyEvolutionWebhook() {
+  const settings = await getEvolutionSettings();
+  const client = new EvolutionClient(settings);
+  const response = await client.getWebhook();
+  const webhook = readWebhookPayload(response);
+  const configuredUrl = readStringField(webhook, ["url"]);
+  const enabled = readBooleanField(webhook, ["enabled"]) ?? false;
+  const configuredEvents = readStringArrayField(webhook, ["events"]) ?? [];
+  const missingEvents = defaultWebhookEvents.filter(
+    (event) => !configuredEvents.includes(event),
+  );
+  const expectedUrl = settings.webhookUrl;
+
+  return {
+    configured: Boolean(configuredUrl),
+    enabled,
+    urlMatches: Boolean(
+      expectedUrl &&
+      configuredUrl &&
+      normalizeWebhookUrl(configuredUrl) === normalizeWebhookUrl(expectedUrl),
+    ),
+    configuredUrl,
+    expectedUrl,
+    missingEvents,
+  };
 }
 
 export function extractQrCodeData(response: unknown) {

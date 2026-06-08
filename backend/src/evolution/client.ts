@@ -42,7 +42,7 @@ function readErrorCode(bodyText: string) {
   }
 }
 
-const defaultWebhookEvents = [
+export const defaultWebhookEvents = [
   "MESSAGES_UPSERT",
   "MESSAGES_UPDATE",
   "CONNECTION_UPDATE",
@@ -204,6 +204,12 @@ export class EvolutionClient {
 
   fetchInstances() {
     return this.request("/instance/fetchInstances");
+  }
+
+  getWebhook() {
+    return this.request(`/webhook/find/${this.options.instanceName}`, {
+      method: "GET",
+    });
   }
 
   setWebhook(webhookUrl: string, webhookSecret?: string) {

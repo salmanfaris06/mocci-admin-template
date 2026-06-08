@@ -46,6 +46,33 @@ describe("EvolutionClient", () => {
     });
   });
 
+  it("fetches configured webhook details using the Evolution v2 find endpoint", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ webhook: { enabled: true } }), {
+          status: 200,
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main",
+    });
+
+    await client.getWebhook();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://evolution.example/webhook/find/main",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({ apikey: "secret" }),
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
   it("configures webhook secret header when provided", async () => {
     const fetchMock = vi.fn(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
