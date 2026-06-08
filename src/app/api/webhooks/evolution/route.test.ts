@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const insertValues = vi.fn();
 const updateSet = vi.fn();
 const insertedMessages: Record<string, unknown>[] = [];
+const insertedPipelineItems: Record<string, unknown>[] = [];
 const insertedWebhookEvents: Record<string, unknown>[] = [];
 const updatedConversations: Record<string, unknown>[] = [];
 const updatedMessages: Record<string, unknown>[] = [];
@@ -16,11 +17,14 @@ vi.mock("@/server/db/schema", () => ({
   contacts: { id: "contacts.id", remoteJid: "contacts.remoteJid" },
   conversations: { id: "conversations.id", contactId: "conversations.contactId", status: "conversations.status" },
   messages: { id: "messages.id", evolutionMessageId: "messages.evolutionMessageId", status: "messages.status", conversationId: "messages.conversationId" },
+  pipelineItems: { id: "pipelineItems.id", contactId: "pipelineItems.contactId" },
+  pipelineStages: { id: "pipelineStages.id", name: "pipelineStages.name", position: "pipelineStages.position" },
   webhookEvents: { idempotencyKey: "webhookEvents.idempotencyKey" },
 }));
 
 vi.mock("drizzle-orm", () => ({
   and: (...args: unknown[]) => ({ type: "and", args }),
+  asc: (value: unknown) => ({ type: "asc", value }),
   eq: (left: unknown, right: unknown) => ({ type: "eq", left, right }),
 }));
 
@@ -38,6 +42,7 @@ vi.mock("@/server/db", () => ({
       values: (value: Record<string, unknown>) => {
         insertValues(value);
         if (table && typeof table === "object" && "evolutionMessageId" in table) insertedMessages.push(value);
+        if (table && typeof table === "object" && "contactId" in table && !("status" in table)) insertedPipelineItems.push(value);
         if (table && typeof table === "object" && "idempotencyKey" in table) insertedWebhookEvents.push(value);
         return {
           onConflictDoNothing: () => ({ returning: async () => [{ id: "message-1", ...value }] }),
@@ -50,6 +55,12 @@ vi.mock("@/server/db", () => ({
     })),
     select: vi.fn(() => ({
       from: (table: unknown) => ({
+        orderBy: () => ({
+          limit: async () => {
+            if (table && typeof table === "object" && "position" in table) return [{ id: "stage-new", name: "New Lead" }];
+            return [];
+          },
+        }),
         where: () => ({
           limit: async () => {
             if (table && typeof table === "object" && "evolutionMessageId" in table) {
@@ -115,6 +126,15 @@ describe("Evolution webhook route", () => {
       }),
     ]);
     expect(updatedConversations).toEqual(expect.arrayContaining([expect.objectContaining({ lastMessageSummary: "Halo", unreadCount: 1 })]));
+    expect(insertedPipelineItems).toEqual([
+      expect.objectContaining({
+        contactId: "contact-1",
+        conversationId: "conversation-1",
+        stageId: "stage-new",
+        title: "Jane",
+        lastActivityAt: expect.any(Date),
+      }),
+    ]);
   });
 
   it("updates message status on MESSAGES_UPDATE", async () => {

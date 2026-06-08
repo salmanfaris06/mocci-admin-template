@@ -1,8 +1,8 @@
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
-import { contacts, conversations, messages, webhookEvents } from "@/server/db/schema";
+import { contacts, conversations, messages, pipelineItems, pipelineStages, webhookEvents } from "@/server/db/schema";
 import { publishInboxEvent } from "../../../../server/crm/inbox-events";
 import { mapAckToMessageStatus, shouldUpdateStatus } from "../../../../server/crm/message-status";
 import { getEvolutionAckStatus, getEvolutionIsFromMe, getEvolutionMessageId } from "./evolution-message";
@@ -140,6 +140,30 @@ async function getOrCreateConversation(contactId: string, summary: string, now: 
   return conversation;
 }
 
+async function ensurePipelineItem(contact: { id: string; displayName: string | null; phone: string | null; remoteJid: string }, conversationId: string, summary: string, now: Date) {
+  const [existingItem] = await db.select({ id: pipelineItems.id }).from(pipelineItems).where(eq(pipelineItems.contactId, contact.id)).limit(1);
+  if (existingItem) return existingItem;
+
+  const [firstStage] = await db.select({ id: pipelineStages.id }).from(pipelineStages).orderBy(asc(pipelineStages.position)).limit(1);
+  if (!firstStage) return null;
+
+  const title = contact.displayName || contact.phone || contact.remoteJid.split("@")[0] || "WhatsApp Contact";
+  const [item] = await db
+    .insert(pipelineItems)
+    .values({
+      contactId: contact.id,
+      conversationId,
+      stageId: firstStage.id,
+      title,
+      notes: summary,
+      position: 0,
+      lastActivityAt: now,
+    })
+    .returning({ id: pipelineItems.id });
+
+  return item;
+}
+
 async function processSingleMessage(payload: unknown) {
   const remoteJid = getRemoteJid(payload);
   const evolutionMessageId = getMessageId(payload);
@@ -149,6 +173,7 @@ async function processSingleMessage(payload: unknown) {
   const now = new Date();
   const contact = await upsertContact(remoteJid, payload);
   const conversation = await getOrCreateConversation(contact.id, text, now);
+  await ensurePipelineItem(contact, conversation.id, text, now);
   const fromMe = getEvolutionIsFromMe(payload);
 
   const [inboundMessage] = await db
