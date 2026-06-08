@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { NavigationProgress } from "@/components/navigation-progress";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { themePresets } from "@/config/theme-presets";
@@ -39,18 +40,20 @@ export const metadata: Metadata = {
 };
 
 const presetMap = JSON.stringify(
-  themePresets.reduce<Record<string, { light: string; lightFg: string; dark: string; darkFg: string }>>(
-    (acc, p) => {
-      acc[p.name] = {
-        light: p.light.primary,
-        lightFg: p.light.primaryForeground,
-        dark: p.dark.primary,
-        darkFg: p.dark.primaryForeground,
-      };
-      return acc;
-    },
-    {},
-  ),
+  themePresets.reduce<
+    Record<
+      string,
+      { light: string; lightFg: string; dark: string; darkFg: string }
+    >
+  >((acc, p) => {
+    acc[p.name] = {
+      light: p.light.primary,
+      lightFg: p.light.primaryForeground,
+      dark: p.dark.primary,
+      darkFg: p.dark.primaryForeground,
+    };
+    return acc;
+  }, {}),
 );
 
 const initScript = `
@@ -86,6 +89,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           {children}
+          <NavigationProgress />
           <Toaster />
         </ThemeProvider>
       </body>
