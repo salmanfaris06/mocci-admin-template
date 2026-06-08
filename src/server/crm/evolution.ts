@@ -91,7 +91,7 @@ export async function createEvolutionInstance() {
       await client.setWebhook(settings.webhookUrl).catch(() => undefined);
     }
 
-    return response;
+    return extractQrCodeData(response);
   } catch (error) {
     if (!isBrokenEvolutionInstanceError(error)) throw error;
 
@@ -100,7 +100,7 @@ export async function createEvolutionInstance() {
     if (settings.webhookUrl) {
       await client.setWebhook(settings.webhookUrl).catch(() => undefined);
     }
-    return response;
+    return extractQrCodeData(response);
   }
 }
 
@@ -130,26 +130,15 @@ export async function connectEvolutionInstance() {
   }
 }
 
-function getStringField(value: unknown, path: string[]) {
-  let cursor = value;
-
-  for (const segment of path) {
-    if (!cursor || typeof cursor !== "object" || !(segment in cursor)) return undefined;
-    cursor = (cursor as Record<string, unknown>)[segment];
-  }
-
-  return typeof cursor === "string" ? cursor : undefined;
-}
-
 function findInstance(instances: unknown, instanceName: string) {
   if (!Array.isArray(instances)) return undefined;
 
   return instances.find((instance) => {
     const name =
-      getStringField(instance, ["name"]) ??
-      getStringField(instance, ["instanceName"]) ??
-      getStringField(instance, ["instance", "instanceName"]) ??
-      getStringField(instance, ["instance", "name"]);
+      readStringField(instance, ["name"]) ??
+      readStringField(instance, ["instanceName"]) ??
+      readStringField(instance, ["instance", "instanceName"]) ??
+      readStringField(instance, ["instance", "name"]);
 
     return name === instanceName;
   });
@@ -167,6 +156,31 @@ export async function testEvolutionConnection() {
     instance: findInstance(instances, settings.instanceName),
     webhookUrl: settings.webhookUrl,
   };
+}
+
+export async function fetchAllInstances() {
+  const client = await getEvolutionClient();
+  const instances = await client.fetchInstances();
+
+  if (!Array.isArray(instances)) return [];
+
+  return instances.map((instance: unknown) => {
+    const name =
+      readStringField(instance, ["name"]) ??
+      readStringField(instance, ["instanceName"]) ??
+      readStringField(instance, ["instance", "instanceName"]) ??
+      readStringField(instance, ["instance", "name"]) ??
+      "unknown";
+
+    const state =
+      readStringField(instance, ["instance", "state"]) ??
+      readStringField(instance, ["state"]) ??
+      readStringField(instance, ["connectionStatus", "state"]) ??
+      readStringField(instance, ["status"]) ??
+      "unknown";
+
+    return { name, state };
+  });
 }
 
 export async function disconnectWhatsAppInstance() {

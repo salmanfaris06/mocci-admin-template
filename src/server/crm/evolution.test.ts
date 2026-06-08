@@ -28,15 +28,19 @@ describe("createEvolutionInstance", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 500, error: "Internal Server Error", response: { message: "Cannot read properties of undefined (reading 'instanceId')" } }), { status: 500 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ instance: { instanceName: "main", state: "close" } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: "SUCCESS", response: { message: "Instance deleted" } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "SUCCESS", response: { message: "Instance created" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ instance: { instanceName: "main", status: "connecting" }, qrcode: { base64: "data:image/png;base64,test", code: "2@test", count: 1 } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const { createEvolutionInstance } = await loadModule();
 
     await expect(createEvolutionInstance()).resolves.toMatchObject({
-      status: "SUCCESS",
-      response: { message: "Instance created" },
+      image: "data:image/png;base64,test",
+      code: "2@test",
+      raw: {
+        instance: { instanceName: "main", status: "connecting" },
+        qrcode: { base64: "data:image/png;base64,test", code: "2@test", count: 1 },
+      },
     });
 
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
@@ -64,13 +68,58 @@ describe("createEvolutionInstance", () => {
     const { createEvolutionInstance } = await loadModule();
 
     await expect(createEvolutionInstance()).resolves.toMatchObject({
-      status: "SUCCESS",
-      response: { message: "Instance already exists" },
+      raw: {
+        status: "SUCCESS",
+        response: { message: "Instance already exists" },
+      },
     });
 
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       "https://evolution.example/instance/create",
       "https://evolution.example/webhook/set/main",
     ]);
+  });
+});
+
+describe("fetchAllInstances", () => {
+  it("maps instance names and states from documented response paths", async () => {
+    process.env.EVOLUTION_BASE_URL = "https://evolution.example";
+    process.env.EVOLUTION_API_KEY = "secret";
+    process.env.EVOLUTION_INSTANCE_NAME = "main";
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([
+          { instance: { instanceName: "main", state: "open" } },
+          { instanceName: "sales", connectionStatus: { state: "connecting" } },
+          { name: "support", status: "close" },
+        ]),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchAllInstances } = await loadModule();
+
+    await expect(fetchAllInstances()).resolves.toEqual([
+      { name: "main", state: "open" },
+      { name: "sales", state: "connecting" },
+      { name: "support", state: "close" },
+    ]);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(["https://evolution.example/instance/fetchInstances"]);
+  });
+
+  it("returns an empty list when Evolution responds with a non-array payload", async () => {
+    process.env.EVOLUTION_BASE_URL = "https://evolution.example";
+    process.env.EVOLUTION_API_KEY = "secret";
+    process.env.EVOLUTION_INSTANCE_NAME = "main";
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchAllInstances } = await loadModule();
+
+    await expect(fetchAllInstances()).resolves.toEqual([]);
   });
 });

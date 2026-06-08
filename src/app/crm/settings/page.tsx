@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fetchAllInstances } from "@/server/crm/evolution";
 import { maskSecret } from "@/server/security/crypto";
 
 import { saveOpenAiKey } from "./actions";
+import { WhatsAppInstanceList } from "./whatsapp-instance-list";
 import { WhatsAppLoginCard } from "./whatsapp-login-card";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +42,7 @@ export default async function CrmSettingsPage() {
   const maskedOpenAi = process.env.OPENAI_API_KEY ? maskSecret(process.env.OPENAI_API_KEY) : "Not configured";
   const evolutionConfigured = Boolean(process.env.EVOLUTION_BASE_URL && process.env.EVOLUTION_INSTANCE_NAME && process.env.EVOLUTION_API_KEY);
   const webhookUrl = effectiveWebhookUrl();
+  const instances = evolutionConfigured ? await fetchAllInstances().catch(() => []) : [];
 
   return (
     <div className="space-y-6">
@@ -58,6 +61,7 @@ export default async function CrmSettingsPage() {
               <EnvStatus label="Effective webhook URL" value={webhookUrl} />
               <EnvStatus label="EVOLUTION_WEBHOOK_URL" value={process.env.EVOLUTION_WEBHOOK_URL} />
             </div>
+            <WhatsAppInstanceList initialInstances={instances} />
             <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
               Edit these values in your deployment environment, for example Vercel Project Settings → Environment Variables. Then redeploy the app and click Refresh status.
             </div>

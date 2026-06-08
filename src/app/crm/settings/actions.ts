@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { aiProviderKeys, apiSettings } from "@/server/db/schema";
-import { configureEvolutionWebhook, connectEvolutionInstance, createEvolutionInstance, deleteWhatsAppInstance, disconnectWhatsAppInstance, testEvolutionConnection } from "@/server/crm/evolution";
+import { configureEvolutionWebhook, connectEvolutionInstance, createEvolutionInstance, deleteWhatsAppInstance, disconnectWhatsAppInstance, fetchAllInstances, testEvolutionConnection } from "@/server/crm/evolution";
 import { encryptSecret } from "@/server/security/crypto";
 
 import { publicError } from "./errors";
@@ -58,6 +58,15 @@ export async function testEvolutionSettings() {
     revalidatePath("/api-settings");
     revalidatePath("/crm/settings");
     return state;
+  });
+}
+
+export async function refreshInstances() {
+  return safeAction(async () => {
+    const instances = await fetchAllInstances();
+    revalidatePath("/api-settings");
+    revalidatePath("/crm/settings");
+    return instances;
   });
 }
 

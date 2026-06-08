@@ -70,7 +70,7 @@ describe("EvolutionClient", () => {
     await expect(client.connectInstance()).rejects.toThrow("reading 'instanceId'");
   });
 
-  it("creates instances without asking Evolution to generate QR during create", async () => {
+  it("creates instances while asking Evolution to generate QR during create", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: "SUCCESS", response: { message: "Instance created" } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -81,7 +81,7 @@ describe("EvolutionClient", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
       instanceName: "main",
       integration: "WHATSAPP-BAILEYS",
-      qrcode: false,
+      qrcode: true,
     });
   });
 

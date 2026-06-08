@@ -138,7 +138,12 @@ export function WhatsAppLoginCard({ initialConnectionState }: WhatsAppLoginCardP
   }, []);
 
   const handleCreate = React.useCallback(() => {
-    runAction(createWhatsAppInstance);
+    runAction(createWhatsAppInstance, (value) => {
+      const qrValue = value as QrState;
+      if (qrValue.image || qrValue.code || qrValue.pairingCode) {
+        setQr({ image: qrValue.image, code: qrValue.code, pairingCode: qrValue.pairingCode, raw: qrValue.raw });
+      }
+    });
   }, [runAction]);
 
   const handleConnect = React.useCallback(() => {
@@ -165,7 +170,7 @@ export function WhatsAppLoginCard({ initialConnectionState }: WhatsAppLoginCardP
   }, [runAction]);
 
   const handleDelete = React.useCallback(() => {
-    if (!window.confirm("Delete this WhatsApp instance from Evolution API? You will need to create and scan a new instance.")) return;
+    if (!window.confirm("Delete this WhatsApp instance permanently? All session data will be lost and you will need to create a new instance and scan QR again.")) return;
 
     runAction(deleteWhatsApp, () => {
       setQr(null);
@@ -223,20 +228,20 @@ export function WhatsAppLoginCard({ initialConnectionState }: WhatsAppLoginCardP
     <Card>
       <CardHeader>
         <CardTitle>WhatsApp Login</CardTitle>
-        <CardDescription>Create/connect your Evolution instance, then scan the QR from WhatsApp Linked devices.</CardDescription>
+        <CardDescription>Create an instance, scan the QR code from WhatsApp → Linked Devices, then monitor connection state.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap gap-2">
           <Button disabled={isPending || isConnected} onClick={handleCreate} type="button" variant="outline">
             {isPending ? <Loader2Icon className="animate-spin" data-icon /> : <RefreshCwIcon data-icon />}
-            Create instance
+            Create Instance
           </Button>
           <Button disabled={isPending || isConnected} onClick={handleConnect} type="button">
             {isPending ? <Loader2Icon className="animate-spin" data-icon /> : <QrCodeIcon data-icon />}
-            Get QR
+            Connect / QR
           </Button>
           <Button disabled={isPending} onClick={handleRefresh} type="button" variant="secondary">
-            Refresh status
+            Refresh Status
           </Button>
         </div>
 
@@ -258,11 +263,11 @@ export function WhatsAppLoginCard({ initialConnectionState }: WhatsAppLoginCardP
                 <div className="flex flex-wrap gap-2">
                   <Button disabled={isPending} onClick={handleDisconnect} size="sm" type="button" variant="secondary">
                     {isPending ? <Loader2Icon className="animate-spin" data-icon /> : <LogOutIcon data-icon />}
-                    Disconnect
+                    Logout WhatsApp
                   </Button>
                   <Button disabled={isPending} onClick={handleDelete} size="sm" type="button" variant="destructive">
                     {isPending ? <Loader2Icon className="animate-spin" data-icon /> : <Trash2Icon data-icon />}
-                    Delete instance
+                    Delete Instance
                   </Button>
                 </div>
               </div>
