@@ -90,7 +90,7 @@ function searchableText(conversation: ConversationPreview) {
 }
 
 function canReceiveRealtimeEvents(connection: WhatsAppConnection) {
-  return connection.status !== "not-configured" && connection.status !== "no-instance";
+  return connection.status === "connected";
 }
 
 function OfflineBanner({ connection }: { connection: WhatsAppConnection }) {
@@ -163,12 +163,14 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
   const [isLoadingOlder, setIsLoadingOlder] = React.useState(false);
   const [readConversationIds, setReadConversationIds] = React.useState<Set<string>>(() => new Set(initialActiveConversationId ? [initialActiveConversationId] : []));
   const [isRefreshing, startRefreshTransition] = React.useTransition();
-  const activeConversation = selectConversationPreview(conversations, selectedConversationId);
+  const inboxIsAvailable = whatsAppConnection.status === "connected";
+  const visibleConversations = React.useMemo(() => (inboxIsAvailable ? conversations : []), [conversations, inboxIsAvailable]);
+  const activeConversation = inboxIsAvailable ? selectConversationPreview(visibleConversations, selectedConversationId) : undefined;
 
   const filteredConversations = React.useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return conversations.filter((conversation) => {
+    return visibleConversations.filter((conversation) => {
       const unreadCount = readConversationIds.has(conversation.id) ? 0 : (conversation.unreadCount ?? 0);
       const matchesFilter =
         conversationFilter === "all" ||
@@ -179,7 +181,7 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
 
       return matchesFilter && matchesSearch;
     });
-  }, [conversationFilter, conversations, readConversationIds, searchQuery]);
+  }, [conversationFilter, readConversationIds, searchQuery, visibleConversations]);
 
   const refreshInbox = React.useCallback((conversationId: string | null) => {
     const params = new URLSearchParams();
@@ -301,7 +303,7 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
                 <h2 className="font-medium text-sm">Conversations</h2>
                 <p className="text-muted-foreground text-xs">Newest leads first</p>
               </div>
-              <Badge variant="outline">{filteredConversations.length}/{conversations.length}</Badge>
+              <Badge variant="outline">{filteredConversations.length}/{visibleConversations.length}</Badge>
             </div>
 
             <div className="relative">
