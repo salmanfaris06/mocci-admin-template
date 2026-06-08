@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { MessageCircleIcon, TrendingUpIcon, UsersIcon, WalletCardsIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/showcase";
@@ -11,6 +12,7 @@ function formatCurrency(valueCents: number) {
 }
 
 export default async function PipelinePage() {
+  await connection();
   const board = await getPipelineBoard();
   const pipelineContacts = board.reduce((sum, stage) => sum + stage.items.length, 0);
   const totalValue = board.reduce((sum, stage) => sum + stage.items.reduce((stageSum, item) => stageSum + (item.valueCents ?? 0), 0), 0);

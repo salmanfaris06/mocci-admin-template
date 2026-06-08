@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { MessageCircleIcon, UserPlusIcon, UsersIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/showcase";
@@ -7,6 +8,7 @@ import { StatCards } from "@/app/pages/ecommerce/stat-card";
 import { ContactsTable } from "./contacts-table";
 
 export default async function ContactsPage() {
+  await connection();
   const contacts = await getCrmContacts(100);
   const activeChats = contacts.filter((contact) => contact.conversationStatus === "open").length;
   const newLeads = contacts.filter((contact) => contact.status === "new").length;
