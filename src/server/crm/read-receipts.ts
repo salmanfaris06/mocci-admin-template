@@ -54,9 +54,12 @@ export async function markConversationMessagesAsRead(
       ),
     );
 
-  const messageKeys = unreadMessages
-    .map(readMessageKey)
-    .filter((key): key is MessageKey => Boolean(key));
+  const readableMessages = unreadMessages
+    .map((message) => ({ id: message.id, key: readMessageKey(message) }))
+    .filter((message): message is { id: string; key: MessageKey } =>
+      Boolean(message.key),
+    );
+  const messageKeys = readableMessages.map((message) => message.key);
   if (messageKeys.length === 0) return { marked: 0 };
 
   try {
@@ -71,7 +74,7 @@ export async function markConversationMessagesAsRead(
     .where(
       inArray(
         messages.id,
-        unreadMessages.map((message) => message.id),
+        readableMessages.map((message) => message.id),
       ),
     );
   await db

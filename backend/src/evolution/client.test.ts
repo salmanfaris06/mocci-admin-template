@@ -7,6 +7,26 @@ afterEach(() => {
 });
 
 describe("EvolutionClient", () => {
+  it("sends text messages using Evolution v2 textMessage body", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main",
+    });
+
+    await client.sendTextMessage("628123", "Halo");
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      number: "628123",
+      textMessage: { text: "Halo" },
+    });
+  });
+
   it("sends reaction messages", async () => {
     const fetchMock = vi.fn(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),

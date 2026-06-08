@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const updateSets: Record<string, unknown>[] = [];
+const whereClauses: unknown[] = [];
 let selectedMessages: Record<string, unknown>[] = [];
 
 vi.mock("@/server/db/schema", () => ({
@@ -36,7 +37,11 @@ vi.mock("@/server/db", () => ({
     update: vi.fn(() => ({
       set: (value: Record<string, unknown>) => {
         updateSets.push(value);
-        return { where: async () => undefined };
+        return {
+          where: async (clause: unknown) => {
+            whereClauses.push(clause);
+          },
+        };
       },
     })),
   },
@@ -45,6 +50,7 @@ vi.mock("@/server/db", () => ({
 afterEach(() => {
   selectedMessages = [];
   updateSets.length = 0;
+  whereClauses.length = 0;
 });
 
 describe("markConversationMessagesAsRead", () => {
@@ -72,6 +78,7 @@ describe("markConversationMessagesAsRead", () => {
           },
         },
       },
+      { id: "local-without-key", evolutionMessageId: "evo-3", rawMetadata: {} },
     ];
     const client = { markMessageAsRead: vi.fn(async () => ({ ok: true })) };
     const { markConversationMessagesAsRead } = await import("./read-receipts");
@@ -84,6 +91,14 @@ describe("markConversationMessagesAsRead", () => {
       { remoteJid: "628123@s.whatsapp.net", fromMe: false, id: "evo-1" },
       { remoteJid: "628123@s.whatsapp.net", fromMe: false, id: "evo-2" },
     ]);
+    expect(whereClauses).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "inArray",
+          values: ["local-1", "local-2"],
+        }),
+      ]),
+    );
     expect(updateSets).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ status: "read" }),

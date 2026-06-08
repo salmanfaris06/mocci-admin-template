@@ -361,9 +361,9 @@ export class EvolutionClient {
   }
 
   sendTextMessage(number: string, text: string) {
-    return this.request(`/message/sendText/${this.options.instanceName}`, {
+    return this.request(`/message/sendText/${this.instancePath()}`, {
       method: "POST",
-      body: JSON.stringify({ number, text }),
+      body: JSON.stringify({ number, textMessage: { text } }),
     });
   }
 }
