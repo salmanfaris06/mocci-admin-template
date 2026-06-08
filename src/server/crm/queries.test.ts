@@ -5,7 +5,11 @@ vi.mock("@/server/db", () => ({ db: {} }));
 vi.mock("@/server/db/schema", () => ({
   aiAgents: {},
   aiRuns: {},
-  aiUsageLogs: { computedCostUsd: "computedCostUsd", inputTokens: "inputTokens", outputTokens: "outputTokens" },
+  aiUsageLogs: {
+    computedCostUsd: "computedCostUsd",
+    inputTokens: "inputTokens",
+    outputTokens: "outputTokens",
+  },
   contacts: {},
   conversations: {},
   messages: {},
@@ -36,18 +40,62 @@ describe("CRM demo data without database configuration", () => {
 
   it("returns demo records for CRM pages when DATABASE_URL is missing", async () => {
     vi.stubEnv("DATABASE_URL", "");
-    const { getAiAgents, getAiRunHistory, getCrmContacts, getPipelineBoard, getRecentConversations } = await import("./queries");
+    const {
+      getAiAgents,
+      getAiRunHistory,
+      getCrmAnalyticsOverview,
+      getCrmContacts,
+      getPipelineBoard,
+      getRecentConversations,
+    } = await import("./queries");
 
     await expect(getRecentConversations()).resolves.not.toHaveLength(0);
     await expect(getCrmContacts()).resolves.not.toHaveLength(0);
     await expect(getPipelineBoard()).resolves.not.toHaveLength(0);
     await expect(getAiRunHistory()).resolves.not.toHaveLength(0);
     await expect(getAiAgents()).resolves.not.toHaveLength(0);
+    await expect(getCrmAnalyticsOverview()).resolves.toMatchObject({
+      kpis: {
+        conversations: expect.any(Number),
+        contacts: expect.any(Number),
+        messages: expect.any(Number),
+        aiSuccessRate: expect.any(Number),
+      },
+      conversationStatus: expect.arrayContaining([
+        expect.objectContaining({
+          status: "open",
+          count: expect.any(Number),
+          percent: expect.any(Number),
+        }),
+      ]),
+      aiRunsByStatus: expect.arrayContaining([
+        expect.objectContaining({
+          status: "succeeded",
+          count: expect.any(Number),
+          percent: expect.any(Number),
+        }),
+      ]),
+      topTags: expect.arrayContaining([
+        expect.objectContaining({
+          tag: expect.any(String),
+          count: expect.any(Number),
+          percent: expect.any(Number),
+        }),
+      ]),
+      pipelineByStage: expect.arrayContaining([
+        expect.objectContaining({
+          stage: expect.any(String),
+          count: expect.any(Number),
+          valueCents: expect.any(Number),
+        }),
+      ]),
+    });
   });
 
   it("returns demo chat messages for a selected demo conversation when DATABASE_URL is missing", async () => {
     vi.stubEnv("DATABASE_URL", "");
-    const { getConversationMessages, getRecentConversations } = await import("./queries");
+    const { getConversationMessages, getRecentConversations } =
+      await import("./queries");
 
     const [conversation] = await getRecentConversations(1);
 

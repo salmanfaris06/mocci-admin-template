@@ -2,7 +2,16 @@ import "server-only";
 
 import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/server/db";
-import { aiAgents, aiRuns, aiUsageLogs, contacts, conversations, messages, pipelineItems, pipelineStages } from "@/server/db/schema";
+import {
+  aiAgents,
+  aiRuns,
+  aiUsageLogs,
+  contacts,
+  conversations,
+  messages,
+  pipelineItems,
+  pipelineStages,
+} from "@/server/db/schema";
 
 const demoSummary = {
   contacts: 248,
@@ -116,7 +125,22 @@ const demoPipelineBoard = [
     position: 1,
     color: "blue",
     items: [
-      { id: "demo-item-1", title: "Klinik Sehat Sentosa", stageId: "demo-stage-new", valueCents: 8_500_000, contactId: "demo-contact-1", contactName: "Dr. Nadira Putri", phone: "628121110001", remoteJid: "628121110001@s.whatsapp.net", conversationId: "demo-conversation-1", lastMessageSummary: "Saya tertarik paket WhatsApp automation untuk klinik.", lastActivityAt: new Date("2026-06-02T09:24:00.000Z"), tags: ["hot lead", "clinic"], priority: "high" },
+      {
+        id: "demo-item-1",
+        title: "Klinik Sehat Sentosa",
+        stageId: "demo-stage-new",
+        valueCents: 8_500_000,
+        contactId: "demo-contact-1",
+        contactName: "Dr. Nadira Putri",
+        phone: "628121110001",
+        remoteJid: "628121110001@s.whatsapp.net",
+        conversationId: "demo-conversation-1",
+        lastMessageSummary:
+          "Saya tertarik paket WhatsApp automation untuk klinik.",
+        lastActivityAt: new Date("2026-06-02T09:24:00.000Z"),
+        tags: ["hot lead", "clinic"],
+        priority: "high",
+      },
     ],
   },
   {
@@ -125,7 +149,21 @@ const demoPipelineBoard = [
     position: 2,
     color: "violet",
     items: [
-      { id: "demo-item-2", title: "Retail WhatsApp AI Agent", stageId: "demo-stage-qualified", valueCents: 12_000_000, contactId: "demo-contact-3", contactName: "Maya Santoso", phone: "628141110003", remoteJid: "628141110003@s.whatsapp.net", conversationId: "demo-conversation-3", lastMessageSummary: "Berapa harga setup CRM + AI agent?", lastActivityAt: new Date("2026-06-01T16:45:00.000Z"), tags: ["pricing"], priority: "medium" },
+      {
+        id: "demo-item-2",
+        title: "Retail WhatsApp AI Agent",
+        stageId: "demo-stage-qualified",
+        valueCents: 12_000_000,
+        contactId: "demo-contact-3",
+        contactName: "Maya Santoso",
+        phone: "628141110003",
+        remoteJid: "628141110003@s.whatsapp.net",
+        conversationId: "demo-conversation-3",
+        lastMessageSummary: "Berapa harga setup CRM + AI agent?",
+        lastActivityAt: new Date("2026-06-01T16:45:00.000Z"),
+        tags: ["pricing"],
+        priority: "medium",
+      },
     ],
   },
   {
@@ -134,10 +172,30 @@ const demoPipelineBoard = [
     position: 3,
     color: "amber",
     items: [
-      { id: "demo-item-3", title: "CRM follow-up automation", stageId: "demo-stage-proposal", valueCents: 15_000_000, contactId: "demo-contact-2", contactName: "Raka Pratama", phone: "628131110002", remoteJid: "628131110002@s.whatsapp.net", conversationId: "demo-conversation-2", lastMessageSummary: "Bisa dibantu follow up proposal kemarin?", lastActivityAt: new Date("2026-06-02T08:10:00.000Z"), tags: ["proposal", "needs human"], priority: "high" },
+      {
+        id: "demo-item-3",
+        title: "CRM follow-up automation",
+        stageId: "demo-stage-proposal",
+        valueCents: 15_000_000,
+        contactId: "demo-contact-2",
+        contactName: "Raka Pratama",
+        phone: "628131110002",
+        remoteJid: "628131110002@s.whatsapp.net",
+        conversationId: "demo-conversation-2",
+        lastMessageSummary: "Bisa dibantu follow up proposal kemarin?",
+        lastActivityAt: new Date("2026-06-02T08:10:00.000Z"),
+        tags: ["proposal", "needs human"],
+        priority: "high",
+      },
     ],
   },
-  { id: "demo-stage-customer", name: "Customer", position: 4, color: "emerald", items: [] },
+  {
+    id: "demo-stage-customer",
+    name: "Customer",
+    position: 4,
+    color: "emerald",
+    items: [],
+  },
   { id: "demo-stage-lost", name: "Lost", position: 5, color: "red", items: [] },
 ];
 
@@ -247,9 +305,30 @@ const demoMessages = {
 };
 
 const demoAiRuns = [
-  { id: "demo-run-1", status: "succeeded" as const, latencyMs: 1840, errorMessage: null, createdAt: new Date("2026-06-02T09:25:00.000Z"), contactName: "Dr. Nadira Putri" },
-  { id: "demo-run-2", status: "timeout" as const, latencyMs: 45_000, errorMessage: "Fallback timeout message sent", createdAt: new Date("2026-06-02T08:11:00.000Z"), contactName: "Raka Pratama" },
-  { id: "demo-run-3", status: "running" as const, latencyMs: null, errorMessage: null, createdAt: new Date("2026-06-02T07:55:00.000Z"), contactName: "Maya Santoso" },
+  {
+    id: "demo-run-1",
+    status: "succeeded" as const,
+    latencyMs: 1840,
+    errorMessage: null,
+    createdAt: new Date("2026-06-02T09:25:00.000Z"),
+    contactName: "Dr. Nadira Putri",
+  },
+  {
+    id: "demo-run-2",
+    status: "timeout" as const,
+    latencyMs: 45_000,
+    errorMessage: "Fallback timeout message sent",
+    createdAt: new Date("2026-06-02T08:11:00.000Z"),
+    contactName: "Raka Pratama",
+  },
+  {
+    id: "demo-run-3",
+    status: "running" as const,
+    latencyMs: null,
+    errorMessage: null,
+    createdAt: new Date("2026-06-02T07:55:00.000Z"),
+    contactName: "Maya Santoso",
+  },
 ];
 
 const demoAgents = [
@@ -258,7 +337,8 @@ const demoAgents = [
     name: "Customer Service Agent",
     provider: "openai",
     modelId: "gpt-4.1-mini",
-    systemPrompt: "Jawab pertanyaan pelanggan WhatsApp secara ramah, singkat, dan bantu arahkan ke tahap pipeline berikutnya.",
+    systemPrompt:
+      "Jawab pertanyaan pelanggan WhatsApp secara ramah, singkat, dan bantu arahkan ke tahap pipeline berikutnya.",
     isActive: true,
     isDefault: true,
   },
@@ -271,12 +351,19 @@ function isDatabaseConfigured() {
 export async function getCrmDashboardSummary() {
   if (!isDatabaseConfigured()) return demoSummary;
 
-  const [[contactCount], [conversationCount], [messageCount], [usageTotals]] = await Promise.all([
-    db.select({ count: sql<number>`count(*)::int` }).from(contacts),
-    db.select({ count: sql<number>`count(*)::int` }).from(conversations),
-    db.select({ count: sql<number>`count(*)::int` }).from(messages),
-    db.select({ costUsd: sql<string>`coalesce(sum(${aiUsageLogs.computedCostUsd}), 0)::text`, inputTokens: sql<number>`coalesce(sum(${aiUsageLogs.inputTokens}), 0)::int`, outputTokens: sql<number>`coalesce(sum(${aiUsageLogs.outputTokens}), 0)::int` }).from(aiUsageLogs),
-  ]);
+  const [[contactCount], [conversationCount], [messageCount], [usageTotals]] =
+    await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` }).from(contacts),
+      db.select({ count: sql<number>`count(*)::int` }).from(conversations),
+      db.select({ count: sql<number>`count(*)::int` }).from(messages),
+      db
+        .select({
+          costUsd: sql<string>`coalesce(sum(${aiUsageLogs.computedCostUsd}), 0)::text`,
+          inputTokens: sql<number>`coalesce(sum(${aiUsageLogs.inputTokens}), 0)::int`,
+          outputTokens: sql<number>`coalesce(sum(${aiUsageLogs.outputTokens}), 0)::int`,
+        })
+        .from(aiUsageLogs),
+    ]);
 
   return {
     contacts: contactCount?.count ?? 0,
@@ -291,7 +378,21 @@ export async function getCrmDashboardSummary() {
 export async function getRecentConversations(limit = 20) {
   if (!isDatabaseConfigured()) return demoConversations.slice(0, limit);
 
-  return db.select({ id: conversations.id, status: conversations.status, aiStatus: conversations.aiStatus, lastMessageSummary: conversations.lastMessageSummary, lastMessageAt: conversations.lastMessageAt, contactName: contacts.displayName, remoteJid: contacts.remoteJid, phone: contacts.phone }).from(conversations).innerJoin(contacts, eq(conversations.contactId, contacts.id)).orderBy(desc(conversations.lastMessageAt)).limit(limit);
+  return db
+    .select({
+      id: conversations.id,
+      status: conversations.status,
+      aiStatus: conversations.aiStatus,
+      lastMessageSummary: conversations.lastMessageSummary,
+      lastMessageAt: conversations.lastMessageAt,
+      contactName: contacts.displayName,
+      remoteJid: contacts.remoteJid,
+      phone: contacts.phone,
+    })
+    .from(conversations)
+    .innerJoin(contacts, eq(conversations.contactId, contacts.id))
+    .orderBy(desc(conversations.lastMessageAt))
+    .limit(limit);
 }
 
 type GetConversationMessagesOptions = {
@@ -299,18 +400,36 @@ type GetConversationMessagesOptions = {
   limit?: number;
 };
 
-export async function getConversationMessages(conversationId: string, options: GetConversationMessagesOptions = {}) {
+export async function getConversationMessages(
+  conversationId: string,
+  options: GetConversationMessagesOptions = {},
+) {
   const limit = options.limit ?? 50;
   const before = options.before ? new Date(options.before) : null;
 
   if (!isDatabaseConfigured()) {
-    const records = demoMessages[conversationId as keyof typeof demoMessages] ?? [];
-    const filteredRecords = before && !Number.isNaN(before.getTime()) ? records.filter((message) => message.createdAt < before) : records;
+    const records =
+      demoMessages[conversationId as keyof typeof demoMessages] ?? [];
+    const filteredRecords =
+      before && !Number.isNaN(before.getTime())
+        ? records.filter((message) => message.createdAt < before)
+        : records;
     return filteredRecords.slice(-limit);
   }
 
-  const whereClause = before && !Number.isNaN(before.getTime()) ? and(eq(messages.conversationId, conversationId), lt(messages.createdAt, before)) : eq(messages.conversationId, conversationId);
-  const records = await db.select().from(messages).where(whereClause).orderBy(desc(messages.createdAt)).limit(limit);
+  const whereClause =
+    before && !Number.isNaN(before.getTime())
+      ? and(
+          eq(messages.conversationId, conversationId),
+          lt(messages.createdAt, before),
+        )
+      : eq(messages.conversationId, conversationId);
+  const records = await db
+    .select()
+    .from(messages)
+    .where(whereClause)
+    .orderBy(desc(messages.createdAt))
+    .limit(limit);
 
   return records.reverse();
 }
@@ -341,17 +460,164 @@ export async function getPipelineBoard() {
       })
       .from(pipelineItems)
       .innerJoin(contacts, eq(pipelineItems.contactId, contacts.id))
-      .leftJoin(conversations, eq(pipelineItems.conversationId, conversations.id))
+      .leftJoin(
+        conversations,
+        eq(pipelineItems.conversationId, conversations.id),
+      )
       .orderBy(asc(pipelineItems.position), desc(pipelineItems.updatedAt)),
   ]);
 
-  return stages.map((stage) => ({ ...stage, items: items.filter((item) => item.stageId === stage.id) }));
+  return stages.map((stage) => ({
+    ...stage,
+    items: items.filter((item) => item.stageId === stage.id),
+  }));
 }
 
 export async function getAiRunHistory(limit = 50) {
   if (!isDatabaseConfigured()) return demoAiRuns.slice(0, limit);
 
-  return db.select({ id: aiRuns.id, status: aiRuns.status, latencyMs: aiRuns.latencyMs, errorMessage: aiRuns.errorMessage, createdAt: aiRuns.createdAt, contactName: contacts.displayName }).from(aiRuns).innerJoin(contacts, eq(aiRuns.contactId, contacts.id)).orderBy(desc(aiRuns.createdAt)).limit(limit);
+  return db
+    .select({
+      id: aiRuns.id,
+      status: aiRuns.status,
+      latencyMs: aiRuns.latencyMs,
+      errorMessage: aiRuns.errorMessage,
+      createdAt: aiRuns.createdAt,
+      contactName: contacts.displayName,
+    })
+    .from(aiRuns)
+    .innerJoin(contacts, eq(aiRuns.contactId, contacts.id))
+    .orderBy(desc(aiRuns.createdAt))
+    .limit(limit);
+}
+
+type CrmAnalyticsOverview = {
+  kpis: {
+    contacts: number;
+    conversations: number;
+    messages: number;
+    aiSuccessRate: number;
+    aiCostUsd: string;
+    inputTokens: number;
+    outputTokens: number;
+    pipelineValueCents: number;
+    unreadConversations: number;
+  };
+  conversationStatus: Array<{ status: string; count: number; percent: number }>;
+  aiRunsByStatus: Array<{ status: string; count: number; percent: number }>;
+  topTags: Array<{ tag: string; count: number; percent: number }>;
+  pipelineByStage: Array<{ stage: string; count: number; valueCents: number }>;
+};
+
+function percentOf(value: number, total: number) {
+  if (total <= 0) return 0;
+  return Math.round((value / total) * 1000) / 10;
+}
+
+function countBy<T extends string>(values: T[]) {
+  const counts = new Map<T, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return counts;
+}
+
+function buildCrmAnalyticsOverview({
+  summary,
+  conversationsList,
+  aiRunsList,
+  contactsList,
+  pipelineBoard,
+}: {
+  summary: Awaited<ReturnType<typeof getCrmDashboardSummary>>;
+  conversationsList: Awaited<ReturnType<typeof getRecentConversations>>;
+  aiRunsList: Awaited<ReturnType<typeof getAiRunHistory>>;
+  contactsList: Awaited<ReturnType<typeof getCrmContacts>>;
+  pipelineBoard: Awaited<ReturnType<typeof getPipelineBoard>>;
+}): CrmAnalyticsOverview {
+  const conversationStatusCounts = countBy(
+    conversationsList.map((conversation) => conversation.status),
+  );
+  const aiStatusCounts = countBy(aiRunsList.map((run) => run.status));
+  const tagCounts = countBy(
+    contactsList.flatMap((contact) => contact.tags ?? []),
+  );
+  const totalPipelineValueCents = pipelineBoard.reduce(
+    (total, stage) =>
+      total +
+      stage.items.reduce(
+        (stageTotal, item) => stageTotal + (item.valueCents ?? 0),
+        0,
+      ),
+    0,
+  );
+  const aiCompletedRuns = aiRunsList.filter(
+    (run) =>
+      run.status === "succeeded" ||
+      run.status === "failed" ||
+      run.status === "timeout",
+  );
+  const aiSucceededRuns = aiCompletedRuns.filter(
+    (run) => run.status === "succeeded",
+  ).length;
+
+  return {
+    kpis: {
+      ...summary,
+      aiSuccessRate: percentOf(aiSucceededRuns, aiCompletedRuns.length),
+      pipelineValueCents: totalPipelineValueCents,
+      unreadConversations: contactsList.filter(
+        (contact) => (contact.unreadCount ?? 0) > 0,
+      ).length,
+    },
+    conversationStatus: Array.from(conversationStatusCounts.entries()).map(
+      ([status, count]) => ({
+        status,
+        count,
+        percent: percentOf(count, conversationsList.length),
+      }),
+    ),
+    aiRunsByStatus: Array.from(aiStatusCounts.entries()).map(
+      ([status, count]) => ({
+        status,
+        count,
+        percent: percentOf(count, aiRunsList.length),
+      }),
+    ),
+    topTags: Array.from(tagCounts.entries())
+      .map(([tag, count]) => ({
+        tag,
+        count,
+        percent: percentOf(count, contactsList.length),
+      }))
+      .sort((left, right) => right.count - left.count)
+      .slice(0, 6),
+    pipelineByStage: pipelineBoard.map((stage) => ({
+      stage: stage.name,
+      count: stage.items.length,
+      valueCents: stage.items.reduce(
+        (total, item) => total + (item.valueCents ?? 0),
+        0,
+      ),
+    })),
+  };
+}
+
+export async function getCrmAnalyticsOverview(): Promise<CrmAnalyticsOverview> {
+  const [summary, conversationsList, aiRunsList, contactsList, pipelineBoard] =
+    await Promise.all([
+      getCrmDashboardSummary(),
+      getRecentConversations(500),
+      getAiRunHistory(500),
+      getCrmContacts(500),
+      getPipelineBoard(),
+    ]);
+
+  return buildCrmAnalyticsOverview({
+    summary,
+    conversationsList,
+    aiRunsList,
+    contactsList,
+    pipelineBoard,
+  });
 }
 
 export async function getCrmContacts(limit = 100) {

@@ -1,82 +1,241 @@
-'use client'
+import {
+  BotIcon,
+  DollarSignIcon,
+  MessageCircleIcon,
+  UsersIcon,
+} from "lucide-react";
 
-import { useState } from 'react'
-import type { DateRange } from 'react-day-picker'
+import { PageHeader } from "@/components/showcase";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  getAiRunHistory,
+  getCrmAnalyticsOverview,
+  getRecentConversations,
+} from "@/server/crm/queries";
 
-import { Card } from '@/components/ui/card'
+const currencyFormatter = new Intl.NumberFormat("id-ID", {
+  currency: "IDR",
+  maximumFractionDigits: 0,
+  style: "currency",
+});
 
-import { GreetingHeader } from '@/components/greeting-header'
-import { SortableWidgets } from '@/components/dashboard/sortable-widgets'
-import { DateRangePicker } from '@/components/dashboard/date-range-picker'
-import { currentUser } from '@/config/user'
+const compactFormatter = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
 
-import ProductInsightsCard from '@/components/shadcn-studio/blocks/widget-product-insights'
-import SalesMetricsCard from '@/components/shadcn-studio/blocks/chart-sales-metrics'
-import StatisticsCard from '@/components/shadcn-studio/blocks/statistics-card-01'
-import TotalEarningCard from '@/components/shadcn-studio/blocks/widget-total-earning'
-import TransactionDatatable from '@/components/shadcn-studio/blocks/datatable-transaction'
-
-import { earningData, statisticsCardData, transactionData } from './data'
-
-const DashboardShell = () => {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>()
-
-  return (
-    <div className='space-y-4'>
-      <div className='flex flex-wrap items-start justify-between gap-3'>
-        <GreetingHeader name={currentUser.firstName} />
-        <DateRangePicker value={dateRange} onChange={setDateRange} />
-      </div>
-      <div className='grid gap-4 sm:grid-cols-3 md:max-lg:grid-cols-1'>
-        {statisticsCardData.map((card, index) => (
-          <StatisticsCard
-            key={index}
-            icon={card.icon}
-            title={card.title}
-            value={card.value}
-            changePercentage={card.changePercentage}
-          />
-        ))}
-      </div>
-
-      <SortableWidgets
-        storageKey='mocci:dashboard-widgets'
-        widgets={[
-          {
-            id: 'insights-earning',
-            content: (
-              <div className='grid gap-4 lg:grid-cols-2'>
-                <ProductInsightsCard className='justify-between gap-2 *:data-[slot=card-content]:space-y-4' />
-                <TotalEarningCard
-                  title='Total Earning'
-                  earning={24650}
-                  trend='up'
-                  percentage={10}
-                  comparisonText='Compare to last year ($84,325)'
-                  earningData={earningData}
-                  className='justify-between gap-4 sm:min-w-0'
-                />
-              </div>
-            )
-          },
-          {
-            id: 'sales-metrics',
-            content: (
-              <SalesMetricsCard className='*:data-[slot=card-content]:space-y-4' />
-            )
-          },
-          {
-            id: 'transactions',
-            content: (
-              <Card className='w-full py-0'>
-                <TransactionDatatable data={transactionData} />
-              </Card>
-            )
-          }
-        ]}
-      />
-    </div>
-  )
+function formatDateTime(value: Date | null) {
+  if (!value) return "No activity yet";
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value);
 }
 
-export default DashboardShell
+function formatPipelineValue(valueCents: number) {
+  return currencyFormatter.format(valueCents / 100);
+}
+
+function statusLabel(status: string) {
+  return status.replaceAll("_", " ");
+}
+
+export default async function DashboardPage() {
+  const [analytics, recentConversations, aiRuns] = await Promise.all([
+    getCrmAnalyticsOverview(),
+    getRecentConversations(5),
+    getAiRunHistory(5),
+  ]);
+
+  const cards = [
+    {
+      title: "Contacts",
+      value: analytics.kpis.contacts.toLocaleString("en-US"),
+      description: "Total CRM contacts",
+      icon: UsersIcon,
+    },
+    {
+      title: "Conversations",
+      value: analytics.kpis.conversations.toLocaleString("en-US"),
+      description: `${analytics.kpis.unreadConversations} with unread messages`,
+      icon: MessageCircleIcon,
+    },
+    {
+      title: "AI Success Rate",
+      value: `${analytics.kpis.aiSuccessRate}%`,
+      description: `$${Number(analytics.kpis.aiCostUsd).toFixed(2)} AI cost`,
+      icon: BotIcon,
+    },
+    {
+      title: "Pipeline Value",
+      value: formatPipelineValue(analytics.kpis.pipelineValueCents),
+      description: `${analytics.pipelineByStage.reduce((total, stage) => total + stage.count, 0)} active opportunities`,
+      icon: DollarSignIcon,
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Dashboard"
+        description="CRM overview for WhatsApp conversations, AI activity, and active pipeline."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Card key={card.title}>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground text-xs">{card.title}</p>
+                  <div className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-md">
+                    <Icon className="size-4" />
+                  </div>
+                </div>
+                <p className="text-2xl font-semibold tracking-tight">
+                  {card.value}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {card.description}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Recent conversations</CardTitle>
+            <CardDescription className="text-xs">
+              Latest WhatsApp threads needing context or follow-up.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last message</TableHead>
+                  <TableHead className="text-right">Activity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentConversations.map((conversation) => (
+                  <TableRow key={conversation.id}>
+                    <TableCell className="font-medium">
+                      {conversation.contactName ??
+                        conversation.phone ??
+                        conversation.remoteJid}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {statusLabel(conversation.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-[320px] truncate">
+                      {conversation.lastMessageSummary ?? "No summary yet"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-right text-xs">
+                      {formatDateTime(conversation.lastMessageAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">AI activity</CardTitle>
+            <CardDescription className="text-xs">
+              Latest automation runs and token consumption.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm">
+              <div>
+                <p className="text-muted-foreground text-xs">Input tokens</p>
+                <p className="font-semibold">
+                  {compactFormatter.format(analytics.kpis.inputTokens)}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Output tokens</p>
+                <p className="font-semibold">
+                  {compactFormatter.format(analytics.kpis.outputTokens)}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {aiRuns.map((run) => (
+                <div
+                  key={run.id}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {run.contactName ?? "Unknown contact"}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {run.latencyMs
+                        ? `${run.latencyMs}ms latency`
+                        : "No latency yet"}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={run.status === "succeeded" ? "default" : "outline"}
+                    className="capitalize"
+                  >
+                    {statusLabel(run.status)}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Pipeline by stage</CardTitle>
+          <CardDescription className="text-xs">
+            Open opportunity count and estimated value by CRM stage.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {analytics.pipelineByStage.map((stage) => (
+              <div key={stage.stage} className="rounded-lg border p-3">
+                <p className="text-sm font-medium">{stage.stage}</p>
+                <p className="mt-2 text-2xl font-semibold">{stage.count}</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {formatPipelineValue(stage.valueCents)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
