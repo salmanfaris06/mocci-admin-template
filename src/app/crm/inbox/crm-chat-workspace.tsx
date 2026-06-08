@@ -1,9 +1,11 @@
 "use client";
 
-import { MessageCircleIcon, PhoneIcon, SearchIcon } from "lucide-react";
+import { AlertTriangleIcon, MessageCircleIcon, PhoneIcon, SearchIcon } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ChatMessageData } from "@/components/ui/chat";
 import { Input } from "@/components/ui/input";
@@ -28,11 +30,19 @@ type ConversationPreview = {
   unreadCount?: number;
 };
 
+type WhatsAppConnection =
+  | { status: "not-configured" }
+  | { status: "no-instance"; instanceName: string }
+  | { status: "connected"; instanceName: string; state: string }
+  | { status: "disconnected"; instanceName: string; state: string }
+  | { status: "unknown"; instanceName: string };
+
 type CrmChatWorkspaceProps = {
   initialActiveConversationId: string | null;
   initialConversations: ConversationPreview[];
   initialHasMoreMessages?: boolean;
   initialMessages: ChatMessageData[];
+  whatsAppConnection: WhatsAppConnection;
 };
 
 type InboxSnapshot = {
@@ -79,7 +89,71 @@ function searchableText(conversation: ConversationPreview) {
   return [conversation.displayName, conversation.contactName, conversation.phone, conversation.remoteJid, conversation.sourceLabel, conversation.lastMessageSummary].filter(Boolean).join(" ").toLowerCase();
 }
 
-export function CrmChatWorkspace({ initialActiveConversationId, initialConversations, initialHasMoreMessages = false, initialMessages }: CrmChatWorkspaceProps) {
+function canReceiveRealtimeEvents(connection: WhatsAppConnection) {
+  return connection.status !== "not-configured" && connection.status !== "no-instance";
+}
+
+function OfflineBanner({ connection }: { connection: WhatsAppConnection }) {
+  if (connection.status !== "disconnected" && connection.status !== "unknown") return null;
+
+  const description =
+    connection.status === "unknown"
+      ? `Could not verify WhatsApp instance ${connection.instanceName}. Existing conversations remain visible, but new messages may not arrive until Evolution API is reachable.`
+      : `WhatsApp instance ${connection.instanceName} is ${connection.state}. Existing conversations remain visible, but new messages will not arrive until it reconnects.`;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-border border-b bg-amber-50 px-4 py-3 text-amber-950 text-sm dark:bg-amber-950/25 dark:text-amber-200">
+      <div className="flex min-w-0 items-start gap-2">
+        <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" />
+        <p>{description}</p>
+      </div>
+      <Button asChild size="sm" variant="outline">
+        <Link href="/api-settings">Reconnect WhatsApp</Link>
+      </Button>
+    </div>
+  );
+}
+
+function InboxEmptyState({ connection }: { connection: WhatsAppConnection }) {
+  if (connection.status === "not-configured") {
+    return <InboxSetupState description="Configure Evolution API environment variables, then create and scan a WhatsApp instance before using the inbox." title="WhatsApp belum dikonfigurasi" />;
+  }
+
+  if (connection.status === "no-instance") {
+    return <InboxSetupState description={`Instance ${connection.instanceName} belum ada di Evolution API. Buat instance dan scan QR untuk mulai menerima pesan.`} title="WhatsApp belum terhubung" />;
+  }
+
+  if (connection.status === "disconnected") {
+    return <InboxSetupState description={`Instance ${connection.instanceName} sedang ${connection.state}. Sambungkan ulang WhatsApp agar pesan baru masuk ke inbox.`} title="WhatsApp sedang offline" />;
+  }
+
+  if (connection.status === "unknown") {
+    return <InboxSetupState description={`Status instance ${connection.instanceName} belum bisa diverifikasi. Cek logs Vercel/VPS dan sambungkan ulang jika perlu.`} title="Status WhatsApp belum diketahui" />;
+  }
+
+  return (
+    <div>
+      <MessageCircleIcon className="mx-auto mb-3 size-10 text-muted-foreground" />
+      <h2 className="font-medium text-lg">Belum ada percakapan</h2>
+      <p className="mt-1 text-muted-foreground text-sm">Pesan WhatsApp baru akan muncul di sini setelah webhook diterima.</p>
+    </div>
+  );
+}
+
+function InboxSetupState({ description, title }: { description: string; title: string }) {
+  return (
+    <div>
+      <MessageCircleIcon className="mx-auto mb-3 size-10 text-muted-foreground" />
+      <h2 className="font-medium text-lg">{title}</h2>
+      <p className="mx-auto mt-1 max-w-md text-muted-foreground text-sm">{description}</p>
+      <Button asChild className="mt-4" size="sm">
+        <Link href="/api-settings">Buka API Settings</Link>
+      </Button>
+    </div>
+  );
+}
+
+export function CrmChatWorkspace({ initialActiveConversationId, initialConversations, initialHasMoreMessages = false, initialMessages, whatsAppConnection }: CrmChatWorkspaceProps) {
   const [conversations, setConversations] = React.useState(initialConversations);
   const [selectedConversationId, setSelectedConversationId] = React.useState(initialActiveConversationId);
   const [messages, setMessages] = React.useState(initialMessages);
@@ -175,7 +249,9 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
     setMessages((currentMessages) => [...currentMessages, message]);
   }, []);
 
+  const shouldSyncInbox = canReceiveRealtimeEvents(whatsAppConnection);
   const { connected } = useInboxStream({
+    enabled: shouldSyncInbox,
     onMessageStatus: React.useCallback((event: MessageStatusEvent) => {
       setMessages((current) =>
         current.map((message) =>
@@ -205,13 +281,15 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
   });
 
   React.useEffect(() => {
+    if (!shouldSyncInbox) return;
+
     const intervalMs = connected ? 30_000 : 10_000;
     const timer = window.setInterval(() => {
       refreshInbox(selectedConversationId);
     }, intervalMs);
 
     return () => window.clearInterval(timer);
-  }, [connected, refreshInbox, selectedConversationId]);
+  }, [connected, refreshInbox, selectedConversationId, shouldSyncInbox]);
 
   return (
     <Card className="h-[calc(100vh-12rem)] min-h-[560px] overflow-hidden p-0">
@@ -296,6 +374,7 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
         </aside>
 
         <section className="flex min-h-0 flex-col overflow-hidden bg-background">
+          <OfflineBanner connection={whatsAppConnection} />
           {activeConversation ? (
             <CrmChatThread
               contactName={activeConversation.displayName ?? activeConversation.contactName ?? activeConversation.phone ?? activeConversation.remoteJid}
@@ -312,11 +391,7 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
             />
           ) : (
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-8 text-center">
-              <div>
-                <MessageCircleIcon className="mx-auto mb-3 size-10 text-muted-foreground" />
-                <h2 className="font-medium text-lg">No CRM chats yet</h2>
-                <p className="mt-1 text-muted-foreground text-sm">Connect WhatsApp or enable demo data to preview chat conversations.</p>
-              </div>
+              <InboxEmptyState connection={whatsAppConnection} />
             </div>
           )}
         </section>
