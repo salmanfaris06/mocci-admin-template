@@ -12,7 +12,10 @@ function vercelWebhookUrl() {
   const vercelUrl = process.env.VERCEL_URL;
   if (!vercelUrl) return undefined;
 
-  const origin = vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://") ? vercelUrl : `https://${vercelUrl}`;
+  const origin =
+    vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://")
+      ? vercelUrl
+      : `https://${vercelUrl}`;
   return `${origin.replace(/\/$/, "")}/api/webhooks/evolution`;
 }
 
@@ -22,7 +25,9 @@ function getWebhookUrl() {
 
   if (!configuredUrl) return fallbackUrl;
 
-  const isLocalhost = /https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(configuredUrl);
+  const isLocalhost = /https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(
+    configuredUrl,
+  );
   if (isLocalhost && process.env.VERCEL_URL) return fallbackUrl;
 
   return configuredUrl;
@@ -34,6 +39,7 @@ export async function getEvolutionSettings() {
     apiKey: requiredEnv("EVOLUTION_API_KEY"),
     instanceName: requiredEnv("EVOLUTION_INSTANCE_NAME"),
     webhookUrl: getWebhookUrl(),
+    webhookSecret: process.env.EVOLUTION_WEBHOOK_SECRET?.trim() || undefined,
   };
 }
 
@@ -47,14 +53,15 @@ export async function configureEvolutionWebhook() {
   if (!settings.webhookUrl) return undefined;
 
   const client = new EvolutionClient(settings);
-  return client.setWebhook(settings.webhookUrl);
+  return client.setWebhook(settings.webhookUrl, settings.webhookSecret);
 }
 
 function readStringField(value: unknown, path: string[]): string | undefined {
   let cursor = value;
 
   for (const segment of path) {
-    if (!cursor || typeof cursor !== "object" || !(segment in cursor)) return undefined;
+    if (!cursor || typeof cursor !== "object" || !(segment in cursor))
+      return undefined;
     cursor = (cursor as Record<string, unknown>)[segment];
   }
 
@@ -74,8 +81,14 @@ export function extractQrCodeData(response: unknown) {
     readStringField(response, ["qrCode", "code"]) ??
     readStringField(response, ["qr", "code"]) ??
     readStringField(response, ["qrcode"]);
-  const pairingCode = readStringField(response, ["pairingCode"]) ?? readStringField(response, ["qrcode", "pairingCode"]);
-  const image = base64Image?.startsWith("data:image") ? base64Image : base64Image ? `data:image/png;base64,${base64Image}` : undefined;
+  const pairingCode =
+    readStringField(response, ["pairingCode"]) ??
+    readStringField(response, ["qrcode", "pairingCode"]);
+  const image = base64Image?.startsWith("data:image")
+    ? base64Image
+    : base64Image
+      ? `data:image/png;base64,${base64Image}`
+      : undefined;
 
   return { image, code: qrCode, pairingCode, raw: response };
 }
@@ -88,7 +101,9 @@ export async function createEvolutionInstance() {
     const response = await client.createInstance(settings.webhookUrl);
 
     if (settings.webhookUrl) {
-      await client.setWebhook(settings.webhookUrl).catch(() => undefined);
+      await client
+        .setWebhook(settings.webhookUrl, settings.webhookSecret)
+        .catch(() => undefined);
     }
 
     return extractQrCodeData(response);
@@ -98,14 +113,18 @@ export async function createEvolutionInstance() {
     await client.deleteInstance();
     const response = await client.createInstance(settings.webhookUrl);
     if (settings.webhookUrl) {
-      await client.setWebhook(settings.webhookUrl).catch(() => undefined);
+      await client
+        .setWebhook(settings.webhookUrl, settings.webhookSecret)
+        .catch(() => undefined);
     }
     return extractQrCodeData(response);
   }
 }
 
 function isBrokenEvolutionInstanceError(error: unknown) {
-  return error instanceof Error && error.message.includes("reading 'instanceId'");
+  return (
+    error instanceof Error && error.message.includes("reading 'instanceId'")
+  );
 }
 
 export async function connectEvolutionInstance() {
@@ -113,7 +132,7 @@ export async function connectEvolutionInstance() {
   const client = new EvolutionClient(settings);
 
   if (settings.webhookUrl) {
-    await client.setWebhook(settings.webhookUrl);
+    await client.setWebhook(settings.webhookUrl, settings.webhookSecret);
   }
 
   try {
@@ -124,7 +143,7 @@ export async function connectEvolutionInstance() {
     await client.deleteInstance();
     await client.createInstance(settings.webhookUrl);
     if (settings.webhookUrl) {
-      await client.setWebhook(settings.webhookUrl);
+      await client.setWebhook(settings.webhookUrl, settings.webhookSecret);
     }
     return extractQrCodeData(await client.connectInstance());
   }

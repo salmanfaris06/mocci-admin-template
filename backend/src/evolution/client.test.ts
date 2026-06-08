@@ -46,6 +46,30 @@ describe("EvolutionClient", () => {
     });
   });
 
+  it("configures webhook secret header when provided", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main",
+    });
+
+    await client.setWebhook(
+      "https://app.example/api/webhooks/evolution",
+      "webhook-secret",
+    );
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      webhook: {
+        headers: { "x-webhook-secret": "webhook-secret" },
+      },
+    });
+  });
+
   it("reads connection state without reconfiguring the webhook", async () => {
     const fetchMock = vi.fn(
       async () =>

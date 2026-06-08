@@ -206,7 +206,7 @@ export class EvolutionClient {
     return this.request("/instance/fetchInstances");
   }
 
-  setWebhook(webhookUrl: string) {
+  setWebhook(webhookUrl: string, webhookSecret?: string) {
     return this.request(`/webhook/set/${this.options.instanceName}`, {
       method: "POST",
       body: JSON.stringify({
@@ -218,6 +218,9 @@ export class EvolutionClient {
           webhookByEvents: true,
           webhookBase64: false,
           events: defaultWebhookEvents,
+          headers: webhookSecret
+            ? { "x-webhook-secret": webhookSecret }
+            : undefined,
         },
       }),
     });
