@@ -14,6 +14,7 @@ import {
   getWhatsAppConnection,
 } from "@/server/crm/whatsapp-connection";
 
+import { WhatsAppRequiredEmptyState } from "../whatsapp-required-empty-state";
 import { PipelineBoard } from "./pipeline-board";
 
 function formatCurrency(valueCents: number) {
@@ -27,9 +28,8 @@ function formatCurrency(valueCents: number) {
 export default async function PipelinePage() {
   await connection();
   const whatsAppConnection = await getWhatsAppConnection();
-  const board = canShowWhatsAppCrmData(whatsAppConnection)
-    ? await getPipelineBoard()
-    : [];
+  const canShowPipeline = canShowWhatsAppCrmData(whatsAppConnection);
+  const board = canShowPipeline ? await getPipelineBoard() : [];
   const pipelineContacts = board.reduce(
     (sum, stage) => sum + stage.items.length,
     0,
@@ -87,12 +87,18 @@ export default async function PipelinePage() {
         ]}
       />
 
-      <PipelineBoard board={board} />
+      {canShowPipeline ? (
+        <>
+          <PipelineBoard board={board} />
 
-      <p className="text-muted-foreground text-xs">
-        Drag cards between stages to update CRM progress. Click “Open chat” on a
-        card to continue the WhatsApp conversation.
-      </p>
+          <p className="text-muted-foreground text-xs">
+            Drag cards between stages to update CRM progress. Click “Open chat”
+            on a card to continue the WhatsApp conversation.
+          </p>
+        </>
+      ) : (
+        <WhatsAppRequiredEmptyState feature="pipeline" />
+      )}
     </div>
   );
 }

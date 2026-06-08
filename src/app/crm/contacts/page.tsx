@@ -10,13 +10,13 @@ import {
 import { StatCards } from "@/app/pages/ecommerce/stat-card";
 
 import { ContactsTable } from "./contacts-table";
+import { WhatsAppRequiredEmptyState } from "../whatsapp-required-empty-state";
 
 export default async function ContactsPage() {
   await connection();
   const whatsAppConnection = await getWhatsAppConnection();
-  const contacts = canShowWhatsAppCrmData(whatsAppConnection)
-    ? await getCrmContacts(100)
-    : [];
+  const canShowContacts = canShowWhatsAppCrmData(whatsAppConnection);
+  const contacts = canShowContacts ? await getCrmContacts(100) : [];
   const activeChats = contacts.filter(
     (contact) => contact.conversationStatus === "open",
   ).length;
@@ -57,7 +57,11 @@ export default async function ContactsPage() {
         ]}
       />
 
-      <ContactsTable contacts={contacts} />
+      {canShowContacts ? (
+        <ContactsTable contacts={contacts} />
+      ) : (
+        <WhatsAppRequiredEmptyState feature="contacts" />
+      )}
     </div>
   );
 }
