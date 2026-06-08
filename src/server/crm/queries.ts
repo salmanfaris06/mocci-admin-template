@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { aiAgents, aiRuns, aiUsageLogs, contacts, conversations, messages, pipelineItems, pipelineStages } from "@/server/db/schema";
 
@@ -47,9 +47,66 @@ const demoConversations = [
 ];
 
 const demoContacts = [
-  { id: "demo-contact-1", displayName: "Dr. Nadira Putri", phone: "628121110001", remoteJid: "628121110001@s.whatsapp.net", status: "qualified", aiEnabled: true },
-  { id: "demo-contact-2", displayName: "Raka Pratama", phone: "628131110002", remoteJid: "628131110002@s.whatsapp.net", status: "proposal", aiEnabled: false },
-  { id: "demo-contact-3", displayName: "Maya Santoso", phone: "628141110003", remoteJid: "628141110003@s.whatsapp.net", status: "new", aiEnabled: true },
+  {
+    id: "demo-contact-1",
+    displayName: "Dr. Nadira Putri",
+    phone: "628121110001",
+    remoteJid: "628121110001@s.whatsapp.net",
+    source: "whatsapp",
+    status: "qualified",
+    aiEnabled: true,
+    tags: ["hot lead", "clinic"],
+    notes: "Interested in WhatsApp automation for two clinic branches.",
+    createdAt: new Date("2026-06-01T08:00:00.000Z"),
+    updatedAt: new Date("2026-06-02T09:24:00.000Z"),
+    conversationId: "demo-conversation-1",
+    conversationStatus: "open" as const,
+    lastMessageSummary: "Saya tertarik paket WhatsApp automation untuk klinik.",
+    lastMessageAt: new Date("2026-06-02T09:24:00.000Z"),
+    unreadCount: 2,
+    pipelineStageId: "demo-stage-new",
+    pipelineStageName: "New Lead",
+  },
+  {
+    id: "demo-contact-2",
+    displayName: "Raka Pratama",
+    phone: "628131110002",
+    remoteJid: "628131110002@s.whatsapp.net",
+    source: "whatsapp",
+    status: "proposal",
+    aiEnabled: false,
+    tags: ["proposal", "needs human"],
+    notes: "Waiting for implementation timeline confirmation.",
+    createdAt: new Date("2026-06-01T08:30:00.000Z"),
+    updatedAt: new Date("2026-06-02T08:10:00.000Z"),
+    conversationId: "demo-conversation-2",
+    conversationStatus: "needs_attention" as const,
+    lastMessageSummary: "Bisa dibantu follow up proposal kemarin?",
+    lastMessageAt: new Date("2026-06-02T08:10:00.000Z"),
+    unreadCount: 1,
+    pipelineStageId: "demo-stage-proposal",
+    pipelineStageName: "Proposal",
+  },
+  {
+    id: "demo-contact-3",
+    displayName: "Maya Santoso",
+    phone: "628141110003",
+    remoteJid: "628141110003@s.whatsapp.net",
+    source: "whatsapp",
+    status: "new",
+    aiEnabled: true,
+    tags: ["pricing"],
+    notes: "Asked for CRM + AI agent setup price.",
+    createdAt: new Date("2026-06-01T09:00:00.000Z"),
+    updatedAt: new Date("2026-06-01T16:45:00.000Z"),
+    conversationId: "demo-conversation-3",
+    conversationStatus: "open" as const,
+    lastMessageSummary: "Berapa harga setup CRM + AI agent?",
+    lastMessageAt: new Date("2026-06-01T16:45:00.000Z"),
+    unreadCount: 0,
+    pipelineStageId: "demo-stage-qualified",
+    pipelineStageName: "Qualified",
+  },
 ];
 
 const demoPipelineBoard = [
@@ -59,7 +116,7 @@ const demoPipelineBoard = [
     position: 1,
     color: "blue",
     items: [
-      { id: "demo-item-1", title: "Klinik Sehat Sentosa", stageId: "demo-stage-new", valueCents: 8_500_000, contactName: "Dr. Nadira Putri", remoteJid: "628121110001@s.whatsapp.net" },
+      { id: "demo-item-1", title: "Klinik Sehat Sentosa", stageId: "demo-stage-new", valueCents: 8_500_000, contactId: "demo-contact-1", contactName: "Dr. Nadira Putri", phone: "628121110001", remoteJid: "628121110001@s.whatsapp.net", conversationId: "demo-conversation-1", lastMessageSummary: "Saya tertarik paket WhatsApp automation untuk klinik.", lastActivityAt: new Date("2026-06-02T09:24:00.000Z"), tags: ["hot lead", "clinic"], priority: "high" },
     ],
   },
   {
@@ -68,7 +125,7 @@ const demoPipelineBoard = [
     position: 2,
     color: "violet",
     items: [
-      { id: "demo-item-2", title: "Retail WhatsApp AI Agent", stageId: "demo-stage-qualified", valueCents: 12_000_000, contactName: "Maya Santoso", remoteJid: "628141110003@s.whatsapp.net" },
+      { id: "demo-item-2", title: "Retail WhatsApp AI Agent", stageId: "demo-stage-qualified", valueCents: 12_000_000, contactId: "demo-contact-3", contactName: "Maya Santoso", phone: "628141110003", remoteJid: "628141110003@s.whatsapp.net", conversationId: "demo-conversation-3", lastMessageSummary: "Berapa harga setup CRM + AI agent?", lastActivityAt: new Date("2026-06-01T16:45:00.000Z"), tags: ["pricing"], priority: "medium" },
     ],
   },
   {
@@ -77,7 +134,7 @@ const demoPipelineBoard = [
     position: 3,
     color: "amber",
     items: [
-      { id: "demo-item-3", title: "CRM follow-up automation", stageId: "demo-stage-proposal", valueCents: 15_000_000, contactName: "Raka Pratama", remoteJid: "628131110002@s.whatsapp.net" },
+      { id: "demo-item-3", title: "CRM follow-up automation", stageId: "demo-stage-proposal", valueCents: 15_000_000, contactId: "demo-contact-2", contactName: "Raka Pratama", phone: "628131110002", remoteJid: "628131110002@s.whatsapp.net", conversationId: "demo-conversation-2", lastMessageSummary: "Bisa dibantu follow up proposal kemarin?", lastActivityAt: new Date("2026-06-02T08:10:00.000Z"), tags: ["proposal", "needs human"], priority: "high" },
     ],
   },
   { id: "demo-stage-customer", name: "Customer", position: 4, color: "emerald", items: [] },
@@ -262,9 +319,32 @@ export async function getPipelineBoard() {
   if (!isDatabaseConfigured()) return demoPipelineBoard;
 
   const [stages, items] = await Promise.all([
-    db.select().from(pipelineStages).orderBy(pipelineStages.position),
-    db.select({ id: pipelineItems.id, title: pipelineItems.title, stageId: pipelineItems.stageId, valueCents: pipelineItems.valueCents, contactName: contacts.displayName, remoteJid: contacts.remoteJid }).from(pipelineItems).innerJoin(contacts, eq(pipelineItems.contactId, contacts.id)).orderBy(pipelineItems.position),
+    db.select().from(pipelineStages).orderBy(asc(pipelineStages.position)),
+    db
+      .select({
+        id: pipelineItems.id,
+        title: pipelineItems.title,
+        stageId: pipelineItems.stageId,
+        valueCents: pipelineItems.valueCents,
+        notes: pipelineItems.notes,
+        position: pipelineItems.position,
+        lastActivityAt: pipelineItems.lastActivityAt,
+        contactId: contacts.id,
+        contactName: contacts.displayName,
+        phone: contacts.phone,
+        remoteJid: contacts.remoteJid,
+        tags: contacts.tags,
+        conversationId: conversations.id,
+        lastMessageSummary: conversations.lastMessageSummary,
+        conversationLastMessageAt: conversations.lastMessageAt,
+        unreadCount: conversations.unreadCount,
+      })
+      .from(pipelineItems)
+      .innerJoin(contacts, eq(pipelineItems.contactId, contacts.id))
+      .leftJoin(conversations, eq(pipelineItems.conversationId, conversations.id))
+      .orderBy(asc(pipelineItems.position), desc(pipelineItems.updatedAt)),
   ]);
+
   return stages.map((stage) => ({ ...stage, items: items.filter((item) => item.stageId === stage.id) }));
 }
 
@@ -277,7 +357,33 @@ export async function getAiRunHistory(limit = 50) {
 export async function getCrmContacts(limit = 100) {
   if (!isDatabaseConfigured()) return demoContacts.slice(0, limit);
 
-  return db.select().from(contacts).limit(limit);
+  return db
+    .select({
+      id: contacts.id,
+      displayName: contacts.displayName,
+      phone: contacts.phone,
+      remoteJid: contacts.remoteJid,
+      source: contacts.source,
+      status: contacts.status,
+      aiEnabled: contacts.aiEnabled,
+      tags: contacts.tags,
+      notes: contacts.notes,
+      createdAt: contacts.createdAt,
+      updatedAt: contacts.updatedAt,
+      conversationId: conversations.id,
+      conversationStatus: conversations.status,
+      lastMessageSummary: conversations.lastMessageSummary,
+      lastMessageAt: conversations.lastMessageAt,
+      unreadCount: conversations.unreadCount,
+      pipelineStageId: pipelineStages.id,
+      pipelineStageName: pipelineStages.name,
+    })
+    .from(contacts)
+    .leftJoin(conversations, eq(conversations.contactId, contacts.id))
+    .leftJoin(pipelineItems, eq(pipelineItems.contactId, contacts.id))
+    .leftJoin(pipelineStages, eq(pipelineItems.stageId, pipelineStages.id))
+    .orderBy(desc(conversations.lastMessageAt), desc(contacts.updatedAt))
+    .limit(limit);
 }
 
 export async function getAiAgents(limit = 20) {

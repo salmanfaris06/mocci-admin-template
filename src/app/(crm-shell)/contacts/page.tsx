@@ -1,1 +1,1 @@
-export { default } from "../../pages/ecommerce/customers/page";
+export { default } from "../../crm/contacts/page";

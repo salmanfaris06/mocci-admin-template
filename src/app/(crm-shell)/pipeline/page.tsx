@@ -1,1 +1,1 @@
-export { default } from "../../pages/kanban/page";
+export { default } from "../../crm/pipeline/page";
