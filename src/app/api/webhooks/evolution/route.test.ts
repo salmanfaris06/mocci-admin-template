@@ -11,6 +11,9 @@ const existingMessagesByEvolutionId = new Map<
   string,
   { id: string; status: string; conversationId: string }
 >();
+const existingWebhookKeys = new Set<string>();
+const triggerAiWhatsAppReplyMock = vi.fn(async () => ({ skipped: "test" }));
+const publishInboxEventMock = vi.fn(async () => undefined);
 const envBackup = { ...process.env };
 
 vi.mock("next/cache", () => ({
@@ -49,11 +52,11 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 vi.mock("../../../../server/crm/ai-reply", () => ({
-  triggerAiWhatsAppReply: vi.fn(async () => ({ skipped: "test" })),
+  triggerAiWhatsAppReply: triggerAiWhatsAppReplyMock,
 }));
 
 vi.mock("../../../../server/crm/inbox-events", () => ({
-  publishInboxEvent: vi.fn(async () => undefined),
+  publishInboxEvent: publishInboxEventMock,
 }));
 
 vi.mock("@/server/db", () => ({
@@ -74,7 +77,20 @@ vi.mock("@/server/db", () => ({
           insertedWebhookEvents.push(value);
         return {
           onConflictDoNothing: () => ({
-            returning: async () => [{ id: "message-1", ...value }],
+            returning: async () => {
+              if (
+                table &&
+                typeof table === "object" &&
+                "idempotencyKey" in table
+              ) {
+                const idempotencyKey = String(value.idempotencyKey);
+                if (existingWebhookKeys.has(idempotencyKey)) return [];
+                existingWebhookKeys.add(idempotencyKey);
+                return [{ id: "webhook-event-1", ...value }];
+              }
+
+              return [{ id: "message-1", ...value }];
+            },
           }),
           onConflictDoUpdate: () => ({
             returning: async () => [{ id: "contact-1", ...value }],
@@ -139,6 +155,9 @@ afterEach(() => {
   updatedConversations.length = 0;
   updatedMessages.length = 0;
   existingMessagesByEvolutionId.clear();
+  existingWebhookKeys.clear();
+  triggerAiWhatsAppReplyMock.mockClear();
+  publishInboxEventMock.mockClear();
   process.env = { ...envBackup };
 });
 
@@ -217,6 +236,50 @@ describe("Evolution webhook route", () => {
         lastActivityAt: expect.any(Date),
       }),
     ]);
+  });
+
+  it("keeps duplicate webhook delivery idempotent", async () => {
+    const { handleEvolutionWebhook } = await import("./route");
+    const body = JSON.stringify({
+      event: "MESSAGES_UPSERT",
+      data: {
+        key: {
+          id: "dup-msg-1",
+          remoteJid: "628999@s.whatsapp.net",
+          fromMe: false,
+        },
+        pushName: "Duplicate Lead",
+        message: { conversation: "Halo lagi" },
+      },
+    });
+
+    const firstResponse = await handleEvolutionWebhook(
+      new Request("https://example.com/api/webhooks/evolution", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+      }),
+    );
+    const secondResponse = await handleEvolutionWebhook(
+      new Request("https://example.com/api/webhooks/evolution", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+      }),
+    );
+
+    await expect(firstResponse.json()).resolves.toMatchObject({
+      processedMessages: 1,
+    });
+    await expect(secondResponse.json()).resolves.toMatchObject({
+      processedMessages: 0,
+      duplicate: true,
+    });
+    expect(insertedMessages).toHaveLength(1);
+    expect(insertedPipelineItems).toHaveLength(1);
+    expect(updatedConversations.filter((update) => "lastMessageSummary" in update)).toHaveLength(1);
+    expect(triggerAiWhatsAppReplyMock).toHaveBeenCalledTimes(1);
+    expect(publishInboxEventMock).toHaveBeenCalledTimes(2);
   });
 
   it("updates message status on MESSAGES_UPDATE", async () => {

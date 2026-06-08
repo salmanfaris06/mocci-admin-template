@@ -183,11 +183,19 @@ function phoneFromJid(remoteJid: string) {
   return phone || undefined;
 }
 
-function idempotencyKey(payload: unknown, pathEvent?: string) {
+async function stablePayloadHash(value: unknown) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function idempotencyKey(payload: unknown, pathEvent?: string) {
   const messageId = getMessageId(payload);
   if (messageId) return messageId;
-  const requestId = readString(payload, [["meta", "requestId"]]);
-  return `${getEventType(payload, pathEvent)}:${requestId ?? `${Date.now()}:${Math.random().toString(36).slice(2)}`}`;
+
+  return `${getEventType(payload, pathEvent)}:${await stablePayloadHash((payload as { raw?: unknown }).raw ?? payload)}`;
 }
 
 async function upsertContact(remoteJid: string, payload: unknown) {
@@ -507,9 +515,9 @@ export async function handleEvolutionWebhook(
 
   const payload = await parseRequestPayload(request, pathEvent);
   const eventType = getEventType(payload, pathEvent);
-  const key = idempotencyKey(payload, pathEvent);
+  const key = await idempotencyKey(payload, pathEvent);
 
-  await db
+  const [insertedEvent] = await db
     .insert(webhookEvents)
     .values({
       eventType,
@@ -518,7 +526,20 @@ export async function handleEvolutionWebhook(
       status: payload.meta.parseError ? "invalid_json" : "received",
       errorMessage: payload.meta.parseError,
     })
-    .onConflictDoNothing({ target: webhookEvents.idempotencyKey });
+    .onConflictDoNothing({ target: webhookEvents.idempotencyKey })
+    .returning({ idempotencyKey: webhookEvents.idempotencyKey });
+
+  if (!insertedEvent) {
+    return Response.json({
+      ok: true,
+      duplicate: true,
+      eventType,
+      pathEvent: pathEvent ?? null,
+      processedMessages: 0,
+      processedUpdates: 0,
+      parseError: payload.meta.parseError ?? null,
+    });
+  }
 
   const processedMessages = payload.meta.parseError
     ? 0
