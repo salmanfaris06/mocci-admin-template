@@ -51,12 +51,52 @@ export async function getEvolutionClient() {
   return new EvolutionClient({ apiKey, baseUrl, instanceName });
 }
 
-export async function configureEvolutionWebhook() {
-  const settings = await getEvolutionSettings();
+async function verifyEvolutionWebhookWith(
+  settings: Awaited<ReturnType<typeof getEvolutionSettings>>,
+  client: EvolutionClient,
+) {
+  const response = await client.getWebhook();
+  const webhook = readWebhookPayload(response);
+  const configuredUrl = readStringField(webhook, ["url"]);
+  const enabled = readBooleanField(webhook, ["enabled"]) ?? false;
+  const configuredEvents = readStringArrayField(webhook, ["events"]) ?? [];
+  const missingEvents = defaultWebhookEvents.filter(
+    (event) => !configuredEvents.includes(event),
+  );
+  const expectedUrl = settings.webhookUrl;
+
+  return {
+    configured: Boolean(configuredUrl),
+    enabled,
+    urlMatches: Boolean(
+      expectedUrl &&
+      configuredUrl &&
+      normalizeWebhookUrl(configuredUrl) === normalizeWebhookUrl(expectedUrl),
+    ),
+    configuredUrl,
+    expectedUrl,
+    missingEvents,
+  };
+}
+
+async function ensureEvolutionWebhookConfigured(
+  settings: Awaited<ReturnType<typeof getEvolutionSettings>>,
+  client: EvolutionClient,
+) {
   if (!settings.webhookUrl) return undefined;
 
+  const configured = await client.setWebhook(
+    settings.webhookUrl,
+    settings.webhookSecret,
+  );
+  const verification = await verifyEvolutionWebhookWith(settings, client);
+  return { configured, verification };
+}
+
+export async function configureEvolutionWebhook() {
+  const settings = await getEvolutionSettings();
   const client = new EvolutionClient(settings);
-  return client.setWebhook(settings.webhookUrl, settings.webhookSecret);
+  return ensureEvolutionWebhookConfigured(settings, client);
 }
 
 function normalizeWebhookUrl(url?: string) {
@@ -103,28 +143,7 @@ function readWebhookPayload(response: unknown) {
 export async function verifyEvolutionWebhook() {
   const settings = await getEvolutionSettings();
   const client = new EvolutionClient(settings);
-  const response = await client.getWebhook();
-  const webhook = readWebhookPayload(response);
-  const configuredUrl = readStringField(webhook, ["url"]);
-  const enabled = readBooleanField(webhook, ["enabled"]) ?? false;
-  const configuredEvents = readStringArrayField(webhook, ["events"]) ?? [];
-  const missingEvents = defaultWebhookEvents.filter(
-    (event) => !configuredEvents.includes(event),
-  );
-  const expectedUrl = settings.webhookUrl;
-
-  return {
-    configured: Boolean(configuredUrl),
-    enabled,
-    urlMatches: Boolean(
-      expectedUrl &&
-      configuredUrl &&
-      normalizeWebhookUrl(configuredUrl) === normalizeWebhookUrl(expectedUrl),
-    ),
-    configuredUrl,
-    expectedUrl,
-    missingEvents,
-  };
+  return verifyEvolutionWebhookWith(settings, client);
 }
 
 export function extractQrCodeData(response: unknown) {
@@ -160,9 +179,9 @@ export async function createEvolutionInstance() {
     const response = await client.createInstance(settings.webhookUrl);
 
     if (settings.webhookUrl) {
-      await client
-        .setWebhook(settings.webhookUrl, settings.webhookSecret)
-        .catch(() => undefined);
+      await ensureEvolutionWebhookConfigured(settings, client).catch(
+        () => undefined,
+      );
     }
 
     return extractQrCodeData(response);
@@ -172,9 +191,9 @@ export async function createEvolutionInstance() {
     await client.deleteInstance();
     const response = await client.createInstance(settings.webhookUrl);
     if (settings.webhookUrl) {
-      await client
-        .setWebhook(settings.webhookUrl, settings.webhookSecret)
-        .catch(() => undefined);
+      await ensureEvolutionWebhookConfigured(settings, client).catch(
+        () => undefined,
+      );
     }
     return extractQrCodeData(response);
   }
@@ -191,7 +210,7 @@ export async function connectEvolutionInstance() {
   const client = new EvolutionClient(settings);
 
   if (settings.webhookUrl) {
-    await client.setWebhook(settings.webhookUrl, settings.webhookSecret);
+    await ensureEvolutionWebhookConfigured(settings, client);
   }
 
   try {
@@ -202,7 +221,7 @@ export async function connectEvolutionInstance() {
     await client.deleteInstance();
     await client.createInstance(settings.webhookUrl);
     if (settings.webhookUrl) {
-      await client.setWebhook(settings.webhookUrl, settings.webhookSecret);
+      await ensureEvolutionWebhookConfigured(settings, client);
     }
     return extractQrCodeData(await client.connectInstance());
   }
@@ -259,6 +278,16 @@ export async function fetchAllInstances() {
 
     return { name, state };
   });
+}
+
+export async function restartEvolutionInstance() {
+  const settings = await getEvolutionSettings();
+  const client = new EvolutionClient(settings);
+  const response = await client.restartInstance();
+  if (settings.webhookUrl) {
+    await ensureEvolutionWebhookConfigured(settings, client);
+  }
+  return response;
 }
 
 export async function disconnectWhatsAppInstance() {

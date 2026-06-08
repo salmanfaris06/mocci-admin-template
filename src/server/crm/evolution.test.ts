@@ -83,6 +83,25 @@ describe("createEvolutionInstance", () => {
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: "https://app.example/api/webhooks/evolution",
+              events: [
+                "MESSAGES_UPSERT",
+                "MESSAGES_UPDATE",
+                "CONNECTION_UPDATE",
+                "QRCODE_UPDATED",
+                "CONTACTS_UPSERT",
+                "CHATS_UPSERT",
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
       );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -108,6 +127,7 @@ describe("createEvolutionInstance", () => {
       "https://evolution.example/instance/delete/main",
       "https://evolution.example/instance/create",
       "https://evolution.example/webhook/set/main",
+      "https://evolution.example/webhook/find/main",
     ]);
   });
 
@@ -156,6 +176,114 @@ describe("createEvolutionInstance", () => {
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       "https://evolution.example/instance/create",
       "https://evolution.example/webhook/set/main",
+    ]);
+  });
+});
+
+describe("connectEvolutionInstance", () => {
+  it("sets and verifies the webhook before returning a connection QR", async () => {
+    process.env.EVOLUTION_BASE_URL = "https://evolution.example";
+    process.env.EVOLUTION_API_KEY = "secret";
+    process.env.EVOLUTION_INSTANCE_NAME = "main";
+    process.env.EVOLUTION_WEBHOOK_URL =
+      "https://app.example/api/webhooks/evolution";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: "https://app.example/api/webhooks/evolution",
+              events: [
+                "MESSAGES_UPSERT",
+                "MESSAGES_UPDATE",
+                "CONNECTION_UPDATE",
+                "QRCODE_UPDATED",
+                "CONTACTS_UPSERT",
+                "CHATS_UPSERT",
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ qrcode: { base64: "test", code: "qr-code" } }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { connectEvolutionInstance } = await loadModule();
+
+    await expect(connectEvolutionInstance()).resolves.toMatchObject({
+      code: "qr-code",
+    });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://evolution.example/webhook/set/main",
+      "https://evolution.example/webhook/find/main",
+      "https://evolution.example/instance/connect/main",
+    ]);
+  });
+});
+
+describe("restartEvolutionInstance", () => {
+  it("restarts and verifies the webhook after restart", async () => {
+    process.env.EVOLUTION_BASE_URL = "https://evolution.example";
+    process.env.EVOLUTION_API_KEY = "secret";
+    process.env.EVOLUTION_INSTANCE_NAME = "main";
+    process.env.EVOLUTION_WEBHOOK_URL =
+      "https://app.example/api/webhooks/evolution";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            instance: { instanceName: "main", state: "close" },
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: "https://app.example/api/webhooks/evolution",
+              events: [
+                "MESSAGES_UPSERT",
+                "MESSAGES_UPDATE",
+                "CONNECTION_UPDATE",
+                "QRCODE_UPDATED",
+                "CONTACTS_UPSERT",
+                "CHATS_UPSERT",
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { restartEvolutionInstance } = await loadModule();
+
+    await expect(restartEvolutionInstance()).resolves.toMatchObject({
+      instance: { instanceName: "main" },
+    });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://evolution.example/instance/restart/main",
+      "https://evolution.example/webhook/set/main",
+      "https://evolution.example/webhook/find/main",
     ]);
   });
 });
@@ -270,21 +398,19 @@ describe("fetchAllInstances", () => {
     process.env.EVOLUTION_API_KEY = "secret";
     process.env.EVOLUTION_INSTANCE_NAME = "main";
 
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify([
-            { instance: { instanceName: "main", state: "open" } },
-            {
-              instanceName: "sales",
-              connectionStatus: { state: "connecting" },
-            },
-            { name: "support", status: "close" },
-          ]),
-          { status: 200 },
-        ),
-      );
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([
+          { instance: { instanceName: "main", state: "open" } },
+          {
+            instanceName: "sales",
+            connectionStatus: { state: "connecting" },
+          },
+          { name: "support", status: "close" },
+        ]),
+        { status: 200 },
+      ),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const { fetchAllInstances } = await loadModule();
