@@ -79,10 +79,12 @@ export class EvolutionClient {
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
+      const isFormData =
+        typeof FormData !== "undefined" && init.body instanceof FormData;
       const response = await fetch(`${this.baseUrl}${path}`, {
         ...init,
         headers: {
-          "content-type": "application/json",
+          ...(isFormData ? {} : { "content-type": "application/json" }),
           apikey: this.options.apiKey,
           ...init.headers,
         },
@@ -308,6 +310,26 @@ export class EvolutionClient {
         },
       );
     }
+  }
+
+  sendMediaMessage(input: {
+    number: string;
+    mediatype: "image" | "video" | "audio" | "document";
+    media: Blob;
+    caption?: string;
+    fileName?: string;
+  }) {
+    const formData = new FormData();
+    formData.set("number", input.number);
+    formData.set("mediatype", input.mediatype);
+    formData.set("media", input.media, input.fileName);
+    if (input.caption) formData.set("caption", input.caption);
+    if (input.fileName) formData.set("fileName", input.fileName);
+
+    return this.request(`/message/sendMedia/${this.instancePath()}`, {
+      method: "POST",
+      body: formData,
+    });
   }
 
   sendTextMessage(number: string, text: string) {

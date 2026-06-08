@@ -7,6 +7,43 @@ afterEach(() => {
 });
 
 describe("EvolutionClient", () => {
+  it("sends media messages as multipart form data", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main sales",
+    });
+    const file = new Blob(["hello"], { type: "image/png" });
+
+    await client.sendMediaMessage({
+      number: "628123",
+      mediatype: "image",
+      media: file,
+      caption: "Preview",
+      fileName: "preview.png",
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://evolution.example/message/sendMedia/main%20sales",
+    );
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
+    expect(fetchMock.mock.calls[0][1].headers).not.toHaveProperty(
+      "content-type",
+    );
+    const body = fetchMock.mock.calls[0][1].body as FormData;
+    expect(body).toBeInstanceOf(FormData);
+    expect(body.get("number")).toBe("628123");
+    expect(body.get("mediatype")).toBe("image");
+    expect(body.get("caption")).toBe("Preview");
+    expect(body.get("fileName")).toBe("preview.png");
+    expect(body.get("media")).toBeInstanceOf(Blob);
+  });
+
   it("checks WhatsApp numbers using encoded instance path", async () => {
     const fetchMock = vi.fn(
       async () =>
