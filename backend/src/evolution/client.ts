@@ -154,6 +154,13 @@ export class EvolutionClient {
     }
   }
 
+  checkWhatsAppNumbers(numbers: string[]) {
+    return this.request(`/chat/whatsappNumbers/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify({ numbers }),
+    });
+  }
+
   markMessageAsRead(readMessages: unknown[]) {
     return this.request(`/chat/markMessageAsRead/${this.instancePath()}`, {
       method: "POST",

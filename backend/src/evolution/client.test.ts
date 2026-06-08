@@ -7,6 +7,32 @@ afterEach(() => {
 });
 
 describe("EvolutionClient", () => {
+  it("checks WhatsApp numbers using encoded instance path", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify([{ number: "628123", exists: true }]), {
+          status: 200,
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main sales",
+    });
+
+    await client.checkWhatsAppNumbers(["628123", "628456"]);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://evolution.example/chat/whatsappNumbers/main%20sales",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ numbers: ["628123", "628456"] }),
+      }),
+    );
+  });
+
   it("marks messages as read using encoded instance path", async () => {
     const fetchMock = vi.fn(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
