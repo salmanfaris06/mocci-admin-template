@@ -4,7 +4,7 @@ const insertedValues: Record<string, unknown>[] = [];
 const insertedJobs: Record<string, unknown>[] = [];
 const updateSets: Record<string, unknown>[] = [];
 
-vi.mock("@/server/db/schema", () => ({
+vi.mock("../db/schema", () => ({
   conversations: { id: "conversations.id" },
   jobs: { id: "jobs.id", type: "jobs.type" },
   messages: { id: "messages.id" },
@@ -14,7 +14,7 @@ vi.mock("drizzle-orm", () => ({
   eq: (left: unknown, right: unknown) => ({ type: "eq", left, right }),
 }));
 
-vi.mock("@/server/db", () => ({
+vi.mock("../db", () => ({
   db: {
     insert: vi.fn((table: unknown) => ({
       values: (value: Record<string, unknown>) => {

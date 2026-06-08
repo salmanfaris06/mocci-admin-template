@@ -1,6 +1,6 @@
 import { getEvolutionClient } from "@/server/crm/evolution";
 import { getInboxSnapshot } from "@/server/crm/inbox-snapshot";
-import { markConversationMessagesAsRead } from "@/server/crm/read-receipts";
+import { markConversationMessagesAsReadBestEffort } from "@/server/crm/read-receipts";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +11,10 @@ export async function GET(request: Request) {
   if (conversationId) {
     const client = await getEvolutionClient().catch(() => undefined);
     if (client) {
-      await markConversationMessagesAsRead(client, conversationId).catch(
-        () => undefined,
-      );
+      await markConversationMessagesAsReadBestEffort(
+        client,
+        conversationId,
+      ).catch(() => undefined);
     }
   }
 

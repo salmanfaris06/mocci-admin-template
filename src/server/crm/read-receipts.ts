@@ -35,6 +35,36 @@ function readMessageKey(row: {
   return { remoteJid, fromMe: fromMe === true, id };
 }
 
+type MarkConversationMessagesAsReadOptions = {
+  timeoutMs?: number;
+};
+
+export async function markConversationMessagesAsReadBestEffort(
+  client: ReadReceiptClient,
+  conversationId: string,
+  options: MarkConversationMessagesAsReadOptions = {},
+) {
+  const timeoutMs = options.timeoutMs ?? 3_000;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<{ marked: 0; skipped: "timeout" }>(
+    (resolve) => {
+      timeout = setTimeout(
+        () => resolve({ marked: 0, skipped: "timeout" }),
+        timeoutMs,
+      );
+    },
+  );
+
+  try {
+    return await Promise.race([
+      markConversationMessagesAsRead(client, conversationId),
+      timeoutPromise,
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 export async function markConversationMessagesAsRead(
   client: ReadReceiptClient,
   conversationId: string,

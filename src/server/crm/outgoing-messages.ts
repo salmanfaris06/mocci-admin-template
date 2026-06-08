@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
-import { db } from "@/server/db";
-import { conversations, jobs, messages } from "@/server/db/schema";
+import { db } from "../db";
+import { conversations, jobs, messages } from "../db/schema";
 
 type EvolutionTextClient = {
   sendTextMessage(number: string, text: string): Promise<unknown>;

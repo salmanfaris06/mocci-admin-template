@@ -53,6 +53,36 @@ afterEach(() => {
   whereClauses.length = 0;
 });
 
+describe("markConversationMessagesAsReadBestEffort", () => {
+  it("times out slow Evolution read receipt calls without crashing", async () => {
+    selectedMessages = [
+      {
+        id: "local-1",
+        evolutionMessageId: "evo-1",
+        rawMetadata: {
+          key: {
+            remoteJid: "628123@s.whatsapp.net",
+            fromMe: false,
+            id: "evo-1",
+          },
+        },
+      },
+    ];
+    const client = {
+      markMessageAsRead: vi.fn(() => new Promise(() => undefined)),
+    };
+    const { markConversationMessagesAsReadBestEffort } =
+      await import("./read-receipts");
+
+    await expect(
+      markConversationMessagesAsReadBestEffort(client, "conversation-1", {
+        timeoutMs: 1,
+      }),
+    ).resolves.toEqual({ marked: 0, skipped: "timeout" });
+    expect(updateSets).toHaveLength(0);
+  });
+});
+
 describe("markConversationMessagesAsRead", () => {
   it("calls Evolution with message keys and marks inbound messages read", async () => {
     selectedMessages = [
