@@ -19,6 +19,8 @@ import { getCrmAnalyticsOverview } from "@/server/crm/queries";
 
 import { AnalyticsCharts } from "./analytics-charts";
 
+export const dynamic = "force-dynamic";
+
 const currencyFormatter = new Intl.NumberFormat("id-ID", {
   currency: "IDR",
   maximumFractionDigits: 0,

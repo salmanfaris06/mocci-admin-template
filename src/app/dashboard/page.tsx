@@ -28,6 +28,8 @@ import {
   getRecentConversations,
 } from "@/server/crm/queries";
 
+export const dynamic = "force-dynamic";
+
 const currencyFormatter = new Intl.NumberFormat("id-ID", {
   currency: "IDR",
   maximumFractionDigits: 0,
