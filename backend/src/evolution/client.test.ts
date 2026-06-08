@@ -7,6 +7,43 @@ afterEach(() => {
 });
 
 describe("EvolutionClient", () => {
+  it("sends reaction messages", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main sales",
+    });
+
+    await client.sendReaction({
+      reactionKey: {
+        remoteJid: "628123@s.whatsapp.net",
+        fromMe: false,
+        id: "msg-1",
+      },
+      reactionMessage: "👍",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://evolution.example/message/sendReaction/main%20sales",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          reactionKey: {
+            remoteJid: "628123@s.whatsapp.net",
+            fromMe: false,
+            id: "msg-1",
+          },
+          reactionMessage: "👍",
+        }),
+      }),
+    );
+  });
+
   it("sends interactive button, list, and poll messages", async () => {
     const fetchMock = vi.fn(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),

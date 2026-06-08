@@ -312,6 +312,13 @@ export class EvolutionClient {
     }
   }
 
+  sendReaction(input: Record<string, unknown>) {
+    return this.request(`/message/sendReaction/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
   sendButtonsMessage(input: Record<string, unknown>) {
     return this.request(`/message/sendButtons/${this.instancePath()}`, {
       method: "POST",
