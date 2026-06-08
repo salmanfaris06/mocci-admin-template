@@ -14,15 +14,28 @@ const sendManualWhatsAppMessageSchema = z.object({
   to: z.string().trim().min(1),
 });
 
+function readEvolutionMessageId(response: unknown): string | undefined {
+  if (!response || typeof response !== "object") return undefined;
+  const record = response as Record<string, unknown>;
+  const key = record.key;
+  if (key && typeof key === "object" && typeof (key as Record<string, unknown>).id === "string") {
+    return (key as Record<string, unknown>).id as string;
+  }
+  if (typeof record.messageId === "string") return record.messageId;
+  return undefined;
+}
+
 export async function sendManualWhatsAppMessage(input: z.infer<typeof sendManualWhatsAppMessageSchema>) {
   const values = sendManualWhatsAppMessageSchema.parse(input);
   const client = await getEvolutionClient();
 
   const sentAt = new Date();
   const response = await client.sendTextMessage(values.to, values.text);
+  const evolutionMessageId = readEvolutionMessageId(response);
 
   await db.insert(messages).values({
     conversationId: values.conversationId,
+    evolutionMessageId,
     direction: "outbound",
     senderType: "admin",
     messageType: "text",

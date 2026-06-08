@@ -107,6 +107,17 @@ export const messages = pgTable("messages", {
   index("messages_created_at_idx").on(table.createdAt),
 ]);
 
+export const inboxEvents = pgTable("inbox_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventType: text("event_type").notNull(),
+  conversationId: uuid("conversation_id").references(() => conversations.id),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("inbox_events_created_at_idx").on(table.createdAt),
+  index("inbox_events_conversation_created_at_idx").on(table.conversationId, table.createdAt),
+]);
+
 export const aiAgents = pgTable("ai_agents", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),

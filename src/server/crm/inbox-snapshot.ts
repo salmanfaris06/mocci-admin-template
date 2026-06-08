@@ -5,6 +5,7 @@ import { getConversationMessages, getRecentConversations } from "@/server/crm/qu
 import { db } from "@/server/db";
 import { contacts } from "@/server/db/schema";
 
+import { toChatMessageStatus } from "./message-status";
 import { getConversationContactLabel, getConversationSourceLabel, getGroupNameFromMetadata, getGroupParticipantJid, getInboundSenderId, getInboundSenderName, isGroupJid } from "./whatsapp-display";
 
 type ConversationPreview = Awaited<ReturnType<typeof getRecentConversations>>[number];
@@ -41,13 +42,15 @@ function toChatMessage(message: ConversationMessage, conversation: ConversationP
   const inboundSenderName = getInboundSenderName({ ...conversation, participantContactName: participantJid ? participantNames.get(participantJid) : null, rawMetadata });
   const senderName = isGroupJid(conversation.remoteJid) ? `${inboundSenderName} · ${getConversationContactLabel(conversation)}` : inboundSenderName;
 
+  const dbStatus = "status" in message && typeof message.status === "string" ? message.status : isOutgoing ? "sent" : "received";
+
   return {
     id: message.id,
     senderId: isOutgoing ? "crm-agent" : getInboundSenderId({ remoteJid: conversation.remoteJid, rawMetadata }),
     senderName: isOutgoing ? "CRM Agent" : senderName,
     text: readText(message),
     timestamp: readTimestamp(message),
-    status: isOutgoing ? "sent" : "delivered",
+    status: toChatMessageStatus(dbStatus, message.direction),
   };
 }
 

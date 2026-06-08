@@ -22,6 +22,13 @@
       "when": 1780655472980,
       "tag": "0002_illegal_harry_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780891523870,
+      "tag": "0003_furry_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

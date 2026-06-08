@@ -3,7 +3,9 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import { contacts, conversations, messages, webhookEvents } from "@/server/db/schema";
-import { getEvolutionIsFromMe } from "./evolution-message";
+import { publishInboxEvent } from "../../../../server/crm/inbox-events";
+import { mapAckToMessageStatus, shouldUpdateStatus } from "../../../../server/crm/message-status";
+import { getEvolutionAckStatus, getEvolutionIsFromMe, getEvolutionMessageId } from "./evolution-message";
 import { triggerAiWhatsAppReply } from "../../../../server/crm/ai-reply";
 import { getWhatsAppAiReplyEligibility } from "../../../../server/crm/whatsapp-ai-eligibility";
 import { getGroupNameFromMetadata, isGroupJid } from "../../../../server/crm/whatsapp-display";
@@ -188,6 +190,20 @@ async function processSingleMessage(payload: unknown) {
     console.info("WhatsApp AI auto-reply skipped", aiEligibility);
   }
 
+  if (inboundMessage) {
+    await publishInboxEvent("message.new", conversation.id, {
+      messageId: inboundMessage.id,
+      direction: fromMe ? "outbound" : "inbound",
+      text,
+      timestamp: now.toISOString(),
+    });
+    await publishInboxEvent("conversation.updated", conversation.id, {
+      lastMessageSummary: text,
+      lastMessageAt: now.toISOString(),
+      unreadCount: fromMe ? conversation.unreadCount : conversation.unreadCount + 1,
+    });
+  }
+
   return true;
 }
 
@@ -198,6 +214,46 @@ async function processMessageEvent(payload: unknown, pathEvent?: string) {
   let processed = 0;
   for (const item of messagePayloads(payload)) {
     if (await processSingleMessage(item)) processed += 1;
+  }
+
+  return processed;
+}
+
+async function processMessageUpdate(payload: unknown) {
+  const evolutionMessageId = getEvolutionMessageId(payload);
+  const ack = getEvolutionAckStatus(payload);
+  if (!evolutionMessageId || !ack) return false;
+
+  const nextStatus = mapAckToMessageStatus(ack);
+  const [existing] = await db
+    .select({ id: messages.id, status: messages.status, conversationId: messages.conversationId })
+    .from(messages)
+    .where(eq(messages.evolutionMessageId, evolutionMessageId))
+    .limit(1);
+
+  if (!existing || !shouldUpdateStatus(existing.status, nextStatus)) return false;
+
+  await db
+    .update(messages)
+    .set({ status: nextStatus, updatedAt: new Date() })
+    .where(eq(messages.id, existing.id));
+
+  await publishInboxEvent("message.status", existing.conversationId, {
+    messageId: existing.id,
+    evolutionMessageId,
+    status: nextStatus,
+  });
+
+  return true;
+}
+
+async function processMessageUpdateEvent(payload: unknown, pathEvent?: string) {
+  const eventType = getEventType(payload, pathEvent).toLowerCase();
+  if (!eventType.includes("messages.update") && !eventType.includes("messages_update")) return 0;
+
+  let processed = 0;
+  for (const item of messagePayloads(payload)) {
+    if (await processMessageUpdate(item)) processed += 1;
   }
 
   return processed;
@@ -250,10 +306,14 @@ export async function handleEvolutionWebhook(request: Request, pathEvent?: strin
     .onConflictDoNothing({ target: webhookEvents.idempotencyKey });
 
   const processedMessages = payload.meta.parseError ? 0 : await processMessageEvent(payload, pathEvent);
+  const processedUpdates = payload.meta.parseError ? 0 : await processMessageUpdateEvent(payload, pathEvent);
 
   await db
     .update(webhookEvents)
-    .set({ status: processedMessages > 0 ? "processed" : payload.meta.parseError ? "invalid_json" : "received", updatedAt: new Date() })
+    .set({
+      status: processedMessages > 0 || processedUpdates > 0 ? "processed" : payload.meta.parseError ? "invalid_json" : "received",
+      updatedAt: new Date(),
+    })
     .where(eq(webhookEvents.idempotencyKey, key));
 
   revalidatePath("/debug");
@@ -261,7 +321,14 @@ export async function handleEvolutionWebhook(request: Request, pathEvent?: strin
   revalidatePath("/inbox");
   revalidatePath("/crm/inbox");
 
-  return Response.json({ ok: true, eventType, pathEvent: pathEvent ?? null, processedMessages, parseError: payload.meta.parseError ?? null });
+  return Response.json({
+    ok: true,
+    eventType,
+    pathEvent: pathEvent ?? null,
+    processedMessages,
+    processedUpdates,
+    parseError: payload.meta.parseError ?? null,
+  });
 }
 
 export async function GET(request: Request) {

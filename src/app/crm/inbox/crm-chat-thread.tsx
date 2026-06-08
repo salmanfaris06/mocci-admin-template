@@ -19,36 +19,33 @@ type CrmChatThreadProps = {
   contactName: string;
   conversationId: string;
   hasMoreMessages?: boolean;
-  initialMessages: ChatMessageData[];
+  messages: ChatMessageData[];
   isLoadingOlder?: boolean;
   onLoadOlder?: () => void;
   onLocalSend?: (text: string, sentAt: Date) => void;
+  onOptimisticSend?: (message: ChatMessageData) => void;
   remoteJid: string;
   to: string;
 };
 
-export function CrmChatThread({ contactName, conversationId, hasMoreMessages = false, initialMessages, isLoadingOlder = false, onLoadOlder, onLocalSend, remoteJid, to }: CrmChatThreadProps) {
-  const [messages, setMessages] = React.useState(initialMessages);
-
+export function CrmChatThread({ contactName, conversationId, hasMoreMessages = false, messages, isLoadingOlder = false, onLoadOlder, onLocalSend, onOptimisticSend, remoteJid, to }: CrmChatThreadProps) {
   const handleSend = React.useCallback((text: string) => {
     const sentAt = new Date();
+    const optimisticMessage = createOptimisticMessage({
+      id: `local-${sentAt.getTime()}`,
+      now: sentAt,
+      senderId: crmUser.id,
+      senderName: crmUser.name,
+      text,
+    });
 
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      createOptimisticMessage({
-        id: `local-${sentAt.getTime()}`,
-        now: sentAt,
-        senderId: crmUser.id,
-        senderName: crmUser.name,
-        text,
-      }),
-    ]);
+    onOptimisticSend?.(optimisticMessage);
     onLocalSend?.(text, sentAt);
 
     void sendManualWhatsAppMessage({ conversationId, text, to }).catch((error) => {
       console.error(error);
     });
-  }, [conversationId, onLocalSend, to]);
+  }, [conversationId, onLocalSend, onOptimisticSend, to]);
 
   return (
     <ChatProvider className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background" currentUser={crmUser} theme="lunar">

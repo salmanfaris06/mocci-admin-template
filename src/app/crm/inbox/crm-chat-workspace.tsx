@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 import { CrmChatThread } from "./crm-chat-thread";
 import { promoteConversationPreview, selectConversationPreview } from "./optimistic-chat";
+import { type MessageStatusEvent, type ConversationUpdatedEvent, useInboxStream } from "./use-inbox-stream";
 
 type ConversationFilter = "all" | "personal" | "group" | "unread";
 
@@ -170,13 +171,47 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
     );
   }, [activeConversation]);
 
+  const handleOptimisticSend = React.useCallback((message: ChatMessageData) => {
+    setMessages((currentMessages) => [...currentMessages, message]);
+  }, []);
+
+  const { connected } = useInboxStream({
+    onMessageStatus: React.useCallback((event: MessageStatusEvent) => {
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === event.messageId
+            ? { ...message, status: event.status as ChatMessageData["status"] }
+            : message,
+        ),
+      );
+    }, []),
+    onConversationUpdated: React.useCallback((event: ConversationUpdatedEvent) => {
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === event.conversationId
+            ? {
+                ...conversation,
+                lastMessageSummary: event.lastMessageSummary,
+                lastMessageAt: new Date(event.lastMessageAt),
+                unreadCount: event.unreadCount,
+              }
+            : conversation,
+        ),
+      );
+    }, []),
+    onMessageNew: React.useCallback(() => {
+      refreshInbox(selectedConversationId);
+    }, [refreshInbox, selectedConversationId]),
+  });
+
   React.useEffect(() => {
+    const intervalMs = connected ? 30_000 : 10_000;
     const timer = window.setInterval(() => {
       refreshInbox(selectedConversationId);
-    }, 10_000);
+    }, intervalMs);
 
     return () => window.clearInterval(timer);
-  }, [refreshInbox, selectedConversationId]);
+  }, [connected, refreshInbox, selectedConversationId]);
 
   return (
     <Card className="h-[calc(100vh-12rem)] min-h-[560px] overflow-hidden p-0">
@@ -266,11 +301,12 @@ export function CrmChatWorkspace({ initialActiveConversationId, initialConversat
               contactName={activeConversation.displayName ?? activeConversation.contactName ?? activeConversation.phone ?? activeConversation.remoteJid}
               conversationId={activeConversation.id}
               hasMoreMessages={hasMoreMessages}
-              initialMessages={messages}
               isLoadingOlder={isLoadingOlder}
-              key={`${activeConversation.id}:${messages.at(-1)?.id ?? "empty"}`}
+              key={activeConversation.id}
+              messages={messages}
               onLoadOlder={handleLoadOlderMessages}
               onLocalSend={handleLocalSend}
+              onOptimisticSend={handleOptimisticSend}
               remoteJid={activeConversation.sourceLabel ?? activeConversation.remoteJid}
               to={activeConversation.phone ?? activeConversation.remoteJid}
             />
