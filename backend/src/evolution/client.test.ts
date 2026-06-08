@@ -7,6 +7,35 @@ afterEach(() => {
 });
 
 describe("EvolutionClient", () => {
+  it("marks messages as read using encoded instance path", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main sales",
+    });
+
+    await client.markMessageAsRead([
+      { remoteJid: "628123@s.whatsapp.net", fromMe: false, id: "msg-1" },
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://evolution.example/chat/markMessageAsRead/main%20sales",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          readMessages: [
+            { remoteJid: "628123@s.whatsapp.net", fromMe: false, id: "msg-1" },
+          ],
+        }),
+      }),
+    );
+  });
+
   it("configures the instance webhook using the Evolution v2 webhook wrapper", async () => {
     const fetchMock = vi.fn(
       async () => new Response(JSON.stringify({ ok: true }), { status: 201 }),

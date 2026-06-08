@@ -155,10 +155,10 @@ export class EvolutionClient {
   }
 
   markMessageAsRead(readMessages: unknown[]) {
-    return this.request(
-      `/chat/markMessageAsRead/${this.options.instanceName}`,
-      { method: "POST", body: JSON.stringify({ readMessages }) },
-    );
+    return this.request(`/chat/markMessageAsRead/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify({ readMessages }),
+    });
   }
 
   setPresence(
