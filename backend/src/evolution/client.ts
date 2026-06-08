@@ -312,6 +312,27 @@ export class EvolutionClient {
     }
   }
 
+  sendButtonsMessage(input: Record<string, unknown>) {
+    return this.request(`/message/sendButtons/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  sendListMessage(input: Record<string, unknown>) {
+    return this.request(`/message/sendList/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  sendPollMessage(input: Record<string, unknown>) {
+    return this.request(`/message/sendPoll/${this.instancePath()}`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
   sendMediaMessage(input: {
     number: string;
     mediatype: "image" | "video" | "audio" | "document";

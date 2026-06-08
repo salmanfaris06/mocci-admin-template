@@ -7,6 +7,61 @@ afterEach(() => {
 });
 
 describe("EvolutionClient", () => {
+  it("sends interactive button, list, and poll messages", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new EvolutionClient({
+      baseUrl: "https://evolution.example",
+      apiKey: "secret",
+      instanceName: "main sales",
+    });
+
+    await client.sendButtonsMessage({
+      number: "628123",
+      text: "Choose",
+      footerText: "CRM",
+      buttons: [{ buttonId: "yes", buttonText: { text: "Yes" } }],
+    });
+    await client.sendListMessage({
+      number: "628123",
+      title: "Menu",
+      description: "Choose one",
+      buttonText: "Open",
+      sections: [{ title: "Main", rows: [{ title: "A", rowId: "a" }] }],
+    });
+    await client.sendPollMessage({
+      number: "628123",
+      name: "Vote",
+      selectableCount: 1,
+      values: ["A", "B"],
+    });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://evolution.example/message/sendButtons/main%20sales",
+      "https://evolution.example/message/sendList/main%20sales",
+      "https://evolution.example/message/sendPoll/main%20sales",
+    ]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      number: "628123",
+      text: "Choose",
+      footerText: "CRM",
+    });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+      number: "628123",
+      title: "Menu",
+      buttonText: "Open",
+    });
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toMatchObject({
+      number: "628123",
+      name: "Vote",
+      selectableCount: 1,
+      values: ["A", "B"],
+    });
+  });
+
   it("sends media messages as multipart form data", async () => {
     const fetchMock = vi.fn(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
