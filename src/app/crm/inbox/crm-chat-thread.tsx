@@ -4,9 +4,18 @@ import { MessageCircleIcon } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { ChatComposer, ChatMessages, ChatProvider, type ChatMessageData } from "@/components/ui/chat";
+import {
+  ChatComposer,
+  ChatMessages,
+  ChatProvider,
+  type ChatMessageData,
+} from "@/components/ui/chat";
 
-import { sendManualWhatsAppMessage } from "./actions";
+import {
+  sendManualWhatsAppMedia,
+  sendManualWhatsAppMessage,
+  sendManualWhatsAppReaction,
+} from "./actions";
 import { createOptimisticMessage } from "./optimistic-chat";
 
 const crmUser = {
@@ -28,27 +37,72 @@ type CrmChatThreadProps = {
   to: string;
 };
 
-export function CrmChatThread({ contactName, conversationId, hasMoreMessages = false, messages, isLoadingOlder = false, onLoadOlder, onLocalSend, onOptimisticSend, remoteJid, to }: CrmChatThreadProps) {
-  const handleSend = React.useCallback((text: string) => {
-    const sentAt = new Date();
-    const optimisticMessage = createOptimisticMessage({
-      id: `local-${sentAt.getTime()}`,
-      now: sentAt,
-      senderId: crmUser.id,
-      senderName: crmUser.name,
-      text,
-    });
+export function CrmChatThread({
+  contactName,
+  conversationId,
+  hasMoreMessages = false,
+  messages,
+  isLoadingOlder = false,
+  onLoadOlder,
+  onLocalSend,
+  onOptimisticSend,
+  remoteJid,
+  to,
+}: CrmChatThreadProps) {
+  const handleSend = React.useCallback(
+    (text: string) => {
+      const sentAt = new Date();
+      const optimisticMessage = createOptimisticMessage({
+        id: `local-${sentAt.getTime()}`,
+        now: sentAt,
+        senderId: crmUser.id,
+        senderName: crmUser.name,
+        text,
+      });
 
-    onOptimisticSend?.(optimisticMessage);
-    onLocalSend?.(text, sentAt);
+      onOptimisticSend?.(optimisticMessage);
+      onLocalSend?.(text, sentAt);
 
-    void sendManualWhatsAppMessage({ conversationId, text, to }).catch((error) => {
-      console.error(error);
-    });
-  }, [conversationId, onLocalSend, onOptimisticSend, to]);
+      void sendManualWhatsAppMessage({ conversationId, text, to }).catch(
+        (error) => {
+          console.error(error);
+        },
+      );
+    },
+    [conversationId, onLocalSend, onOptimisticSend, to],
+  );
+
+  const handleFileUpload = React.useCallback(
+    (files: File[]) => {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.set("conversationId", conversationId);
+        formData.set("to", to);
+        formData.set("file", file);
+        void sendManualWhatsAppMedia(formData).catch((error) => {
+          console.error(error);
+        });
+      }
+    },
+    [conversationId, to],
+  );
+
+  const handleReactionAdd = React.useCallback(
+    (messageId: string, emoji: string) => {
+      void sendManualWhatsAppReaction({ messageId, emoji }).catch((error) => {
+        console.error(error);
+      });
+    },
+    [],
+  );
 
   return (
-    <ChatProvider className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background" currentUser={crmUser} theme="lunar">
+    <ChatProvider
+      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
+      currentUser={crmUser}
+      onReactionAdd={handleReactionAdd}
+      theme="lunar"
+    >
       <header className="flex flex-col gap-4 border-border border-b p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
@@ -56,7 +110,9 @@ export function CrmChatThread({ contactName, conversationId, hasMoreMessages = f
           </div>
           <div className="min-w-0">
             <h2 className="truncate font-semibold text-lg">{contactName}</h2>
-            <p className="truncate text-muted-foreground text-sm">{remoteJid}</p>
+            <p className="truncate text-muted-foreground text-sm">
+              {remoteJid}
+            </p>
           </div>
         </div>
       </header>
@@ -65,8 +121,16 @@ export function CrmChatThread({ contactName, conversationId, hasMoreMessages = f
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {hasMoreMessages ? (
             <div className="border-border border-b px-4 py-2 text-center">
-              <Button disabled={isLoadingOlder} onClick={onLoadOlder} size="sm" type="button" variant="ghost">
-                {isLoadingOlder ? "Loading older messages..." : "Load older messages"}
+              <Button
+                disabled={isLoadingOlder}
+                onClick={onLoadOlder}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                {isLoadingOlder
+                  ? "Loading older messages..."
+                  : "Load older messages"}
               </Button>
             </div>
           ) : null}
@@ -77,7 +141,10 @@ export function CrmChatThread({ contactName, conversationId, hasMoreMessages = f
           <div>
             <MessageCircleIcon className="mx-auto mb-3 size-10 text-muted-foreground" />
             <h3 className="font-medium">No messages in this thread</h3>
-            <p className="mt-1 text-muted-foreground text-sm">Messages will appear here once this conversation has WhatsApp activity.</p>
+            <p className="mt-1 text-muted-foreground text-sm">
+              Messages will appear here once this conversation has WhatsApp
+              activity.
+            </p>
           </div>
         </div>
       )}
@@ -86,6 +153,7 @@ export function CrmChatThread({ contactName, conversationId, hasMoreMessages = f
         <ChatComposer
           composerBodyClassName="border-t-0 bg-transparent px-0 py-0 backdrop-blur-none backdrop-saturate-100"
           inputContainerClassName="bg-transparent"
+          onFileUpload={handleFileUpload}
           onSend={handleSend}
           placeholder="Type a WhatsApp reply"
         />
