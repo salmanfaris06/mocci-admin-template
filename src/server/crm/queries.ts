@@ -1,6 +1,7 @@
 import "server-only";
 
-import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
   aiAgents,
@@ -491,6 +492,22 @@ export async function getAiRunHistory(limit = 50) {
     .limit(limit);
 }
 
+type PipelineStageSummary = Array<{
+  stage: string;
+  count: number;
+  valueCents: number;
+}>;
+
+type CrmDashboardOverview = {
+  summary: Awaited<ReturnType<typeof getCrmDashboardSummary>>;
+  recentConversations: Awaited<ReturnType<typeof getRecentConversations>>;
+  aiRuns: Awaited<ReturnType<typeof getAiRunHistory>>;
+  pipelineByStage: PipelineStageSummary;
+  pipelineValueCents: number;
+  aiSuccessRate: number;
+  unreadConversations: number;
+};
+
 type CrmAnalyticsOverview = {
   kpis: {
     contacts: number;
@@ -506,7 +523,7 @@ type CrmAnalyticsOverview = {
   conversationStatus: Array<{ status: string; count: number; percent: number }>;
   aiRunsByStatus: Array<{ status: string; count: number; percent: number }>;
   topTags: Array<{ tag: string; count: number; percent: number }>;
-  pipelineByStage: Array<{ stage: string; count: number; valueCents: number }>;
+  pipelineByStage: PipelineStageSummary;
 };
 
 function percentOf(value: number, total: number) {
@@ -519,6 +536,94 @@ function countBy<T extends string>(values: T[]) {
   for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
   return counts;
 }
+
+async function getPipelineStageSummary(): Promise<PipelineStageSummary> {
+  if (!isDatabaseConfigured()) {
+    return demoPipelineBoard.map((stage) => ({
+      stage: stage.name,
+      count: stage.items.length,
+      valueCents: stage.items.reduce(
+        (total, item) => total + (item.valueCents ?? 0),
+        0,
+      ),
+    }));
+  }
+
+  return db
+    .select({
+      stage: pipelineStages.name,
+      count: sql<number>`count(${pipelineItems.id})::int`,
+      valueCents: sql<number>`coalesce(sum(${pipelineItems.valueCents}), 0)::int`,
+    })
+    .from(pipelineStages)
+    .leftJoin(pipelineItems, eq(pipelineItems.stageId, pipelineStages.id))
+    .groupBy(pipelineStages.id)
+    .orderBy(asc(pipelineStages.position));
+}
+
+async function getUnreadConversationCount() {
+  if (!isDatabaseConfigured()) {
+    return demoContacts.filter((contact) => contact.unreadCount > 0).length;
+  }
+
+  const [record] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(conversations)
+    .where(gt(conversations.unreadCount, 0));
+
+  return record?.count ?? 0;
+}
+
+function calculateAiSuccessRate(
+  aiRunsList: Awaited<ReturnType<typeof getAiRunHistory>>,
+) {
+  const completedRuns = aiRunsList.filter(
+    (run) =>
+      run.status === "succeeded" ||
+      run.status === "failed" ||
+      run.status === "timeout",
+  );
+  const succeededRuns = completedRuns.filter(
+    (run) => run.status === "succeeded",
+  ).length;
+
+  return percentOf(succeededRuns, completedRuns.length);
+}
+
+export async function getCrmDashboardOverview(): Promise<CrmDashboardOverview> {
+  const [
+    summary,
+    recentConversations,
+    aiRunsList,
+    pipelineByStage,
+    unreadConversations,
+  ] = await Promise.all([
+    getCrmDashboardSummary(),
+    getRecentConversations(5),
+    getAiRunHistory(5),
+    getPipelineStageSummary(),
+    getUnreadConversationCount(),
+  ]);
+
+  return {
+    summary,
+    recentConversations,
+    aiRuns: aiRunsList,
+    pipelineByStage,
+    pipelineValueCents: pipelineByStage.reduce(
+      (total, stage) => total + stage.valueCents,
+      0,
+    ),
+    aiSuccessRate: calculateAiSuccessRate(aiRunsList),
+    unreadConversations,
+  };
+}
+
+export const getCachedCrmDashboardOverview = unstable_cache(
+  getCrmDashboardOverview,
+  ["crm-dashboard-overview"],
+  { revalidate: 60 },
+);
 
 function buildCrmAnalyticsOverview({
   summary,
@@ -605,9 +710,9 @@ export async function getCrmAnalyticsOverview(): Promise<CrmAnalyticsOverview> {
   const [summary, conversationsList, aiRunsList, contactsList, pipelineBoard] =
     await Promise.all([
       getCrmDashboardSummary(),
-      getRecentConversations(500),
-      getAiRunHistory(500),
-      getCrmContacts(500),
+      getRecentConversations(250),
+      getAiRunHistory(250),
+      getCrmContacts(250),
       getPipelineBoard(),
     ]);
 
@@ -619,6 +724,12 @@ export async function getCrmAnalyticsOverview(): Promise<CrmAnalyticsOverview> {
     pipelineBoard,
   });
 }
+
+export const getCachedCrmAnalyticsOverview = unstable_cache(
+  getCrmAnalyticsOverview,
+  ["crm-analytics-overview"],
+  { revalidate: 60 },
+);
 
 export async function getCrmContacts(limit = 100) {
   if (!isDatabaseConfigured()) return demoContacts.slice(0, limit);

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/cache", () => ({
+  unstable_cache: <T extends (...args: never[]) => unknown>(fn: T) => fn,
+}));
 vi.mock("@/server/db", () => ({ db: {} }));
 vi.mock("@/server/db/schema", () => ({
   aiAgents: {},
@@ -45,6 +48,7 @@ describe("CRM demo data without database configuration", () => {
       getAiRunHistory,
       getCrmAnalyticsOverview,
       getCrmContacts,
+      getCrmDashboardOverview,
       getPipelineBoard,
       getRecentConversations,
     } = await import("./queries");
@@ -54,6 +58,36 @@ describe("CRM demo data without database configuration", () => {
     await expect(getPipelineBoard()).resolves.not.toHaveLength(0);
     await expect(getAiRunHistory()).resolves.not.toHaveLength(0);
     await expect(getAiAgents()).resolves.not.toHaveLength(0);
+    await expect(getCrmDashboardOverview()).resolves.toMatchObject({
+      summary: {
+        contacts: expect.any(Number),
+        conversations: expect.any(Number),
+        messages: expect.any(Number),
+        aiCostUsd: expect.any(String),
+      },
+      recentConversations: expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(String),
+          status: expect.any(String),
+        }),
+      ]),
+      aiRuns: expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(String),
+          status: expect.any(String),
+        }),
+      ]),
+      pipelineByStage: expect.arrayContaining([
+        expect.objectContaining({
+          stage: expect.any(String),
+          count: expect.any(Number),
+          valueCents: expect.any(Number),
+        }),
+      ]),
+      pipelineValueCents: expect.any(Number),
+      aiSuccessRate: expect.any(Number),
+      unreadConversations: expect.any(Number),
+    });
     await expect(getCrmAnalyticsOverview()).resolves.toMatchObject({
       kpis: {
         conversations: expect.any(Number),

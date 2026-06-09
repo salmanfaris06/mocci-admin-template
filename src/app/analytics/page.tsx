@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { getCrmAnalyticsOverview } from "@/server/crm/queries";
+import { getCachedCrmAnalyticsOverview } from "@/server/crm/queries";
 
 import { AnalyticsCharts } from "./analytics-charts";
 
@@ -41,7 +41,7 @@ function labelStatus(status: string) {
 }
 
 export default async function AnalyticsPage() {
-  const analytics = await getCrmAnalyticsOverview();
+  const analytics = await getCachedCrmAnalyticsOverview();
   const cards = [
     {
       label: "Messages",

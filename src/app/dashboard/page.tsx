@@ -22,11 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  getAiRunHistory,
-  getCrmAnalyticsOverview,
-  getRecentConversations,
-} from "@/server/crm/queries";
+import { getCachedCrmDashboardOverview } from "@/server/crm/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -58,35 +54,31 @@ function statusLabel(status: string) {
 }
 
 export default async function DashboardPage() {
-  const [analytics, recentConversations, aiRuns] = await Promise.all([
-    getCrmAnalyticsOverview(),
-    getRecentConversations(5),
-    getAiRunHistory(5),
-  ]);
+  const dashboard = await getCachedCrmDashboardOverview();
 
   const cards = [
     {
       title: "Contacts",
-      value: analytics.kpis.contacts.toLocaleString("en-US"),
+      value: dashboard.summary.contacts.toLocaleString("en-US"),
       description: "Total CRM contacts",
       icon: UsersIcon,
     },
     {
       title: "Conversations",
-      value: analytics.kpis.conversations.toLocaleString("en-US"),
-      description: `${analytics.kpis.unreadConversations} with unread messages`,
+      value: dashboard.summary.conversations.toLocaleString("en-US"),
+      description: `${dashboard.unreadConversations} with unread messages`,
       icon: MessageCircleIcon,
     },
     {
       title: "AI Success Rate",
-      value: `${analytics.kpis.aiSuccessRate}%`,
-      description: `$${Number(analytics.kpis.aiCostUsd).toFixed(2)} AI cost`,
+      value: `${dashboard.aiSuccessRate}%`,
+      description: `$${Number(dashboard.summary.aiCostUsd).toFixed(2)} AI cost`,
       icon: BotIcon,
     },
     {
       title: "Pipeline Value",
-      value: formatPipelineValue(analytics.kpis.pipelineValueCents),
-      description: `${analytics.pipelineByStage.reduce((total, stage) => total + stage.count, 0)} active opportunities`,
+      value: formatPipelineValue(dashboard.pipelineValueCents),
+      description: `${dashboard.pipelineByStage.reduce((total, stage) => total + stage.count, 0)} active opportunities`,
       icon: DollarSignIcon,
     },
   ];
@@ -141,7 +133,7 @@ export default async function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentConversations.map((conversation) => (
+                {dashboard.recentConversations.map((conversation) => (
                   <TableRow key={conversation.id}>
                     <TableCell className="font-medium">
                       {conversation.contactName ??
@@ -178,18 +170,18 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-muted-foreground text-xs">Input tokens</p>
                 <p className="font-semibold">
-                  {compactFormatter.format(analytics.kpis.inputTokens)}
+                  {compactFormatter.format(dashboard.summary.inputTokens)}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Output tokens</p>
                 <p className="font-semibold">
-                  {compactFormatter.format(analytics.kpis.outputTokens)}
+                  {compactFormatter.format(dashboard.summary.outputTokens)}
                 </p>
               </div>
             </div>
             <div className="space-y-3">
-              {aiRuns.map((run) => (
+              {dashboard.aiRuns.map((run) => (
                 <div
                   key={run.id}
                   className="flex items-center justify-between gap-3 text-sm"
@@ -226,7 +218,7 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            {analytics.pipelineByStage.map((stage) => (
+            {dashboard.pipelineByStage.map((stage) => (
               <div key={stage.stage} className="rounded-lg border p-3">
                 <p className="text-sm font-medium">{stage.stage}</p>
                 <p className="mt-2 text-2xl font-semibold">{stage.count}</p>
