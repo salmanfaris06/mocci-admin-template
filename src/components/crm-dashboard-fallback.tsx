@@ -1,3 +1,4 @@
+import { CrmDataNotice } from "@/components/crm-data-notice";
 import { PageHeader } from "@/components/showcase";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -15,6 +16,7 @@ export function CrmDashboardFallback() {
         title="Dashboard"
         description="CRM overview is temporarily using fallback data while production data is unavailable."
       />
+      <CrmDataNotice label="fallback dashboard data" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(([title, value, description]) => (
           <Card key={title}>

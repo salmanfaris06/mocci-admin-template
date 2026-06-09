@@ -5,6 +5,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
+import { CrmDataNotice } from "@/components/crm-data-notice";
 import { PageHeader } from "@/components/showcase";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -87,6 +88,9 @@ export async function DashboardPageContent() {
         title="Dashboard"
         description="CRM overview for WhatsApp conversations, AI activity, and active pipeline."
       />
+      {dashboard.isFallbackData ? (
+        <CrmDataNotice label="cached fallback dashboard data" />
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => {

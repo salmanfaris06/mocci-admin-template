@@ -518,6 +518,7 @@ type CrmDashboardOverview = {
   pipelineValueCents: number;
   aiSuccessRate: number;
   unreadConversations: number;
+  isFallbackData: boolean;
 };
 
 type CrmAnalyticsOverview = {
@@ -536,6 +537,7 @@ type CrmAnalyticsOverview = {
   aiRunsByStatus: Array<{ status: string; count: number; percent: number }>;
   topTags: Array<{ tag: string; count: number; percent: number }>;
   pipelineByStage: PipelineStageSummary;
+  isFallbackData: boolean;
 };
 
 function percentOf(value: number, total: number) {
@@ -617,6 +619,7 @@ function demoDashboardOverview(): CrmDashboardOverview {
     unreadConversations: demoContacts.filter(
       (contact) => contact.unreadCount > 0,
     ).length,
+    isFallbackData: true,
   };
 }
 
@@ -823,6 +826,7 @@ export async function getCrmDashboardOverview(): Promise<CrmDashboardOverview> {
         ),
         aiSuccessRate: calculateAiSuccessRate(aiRunsList),
         unreadConversations,
+        isFallbackData: false,
       };
     })(),
     demoDashboardOverview(),
@@ -833,7 +837,7 @@ export async function getCrmDashboardOverview(): Promise<CrmDashboardOverview> {
 export const getCachedCrmDashboardOverview = unstable_cache(
   getCrmDashboardOverview,
   ["crm-dashboard-overview"],
-  { revalidate: 60 },
+  { revalidate: 300 },
 );
 
 function buildCrmAnalyticsOverview({
@@ -914,6 +918,7 @@ function buildCrmAnalyticsOverview({
         0,
       ),
     })),
+    isFallbackData: !isDatabaseConfigured(),
   };
 }
 
@@ -955,6 +960,7 @@ export async function getCrmAnalyticsOverview(): Promise<CrmAnalyticsOverview> {
         aiRunsByStatus,
         topTags,
         pipelineByStage,
+        isFallbackData: false,
       };
     })(),
     demoAnalyticsOverview(),
@@ -965,7 +971,7 @@ export async function getCrmAnalyticsOverview(): Promise<CrmAnalyticsOverview> {
 export const getCachedCrmAnalyticsOverview = unstable_cache(
   getCrmAnalyticsOverview,
   ["crm-analytics-overview"],
-  { revalidate: 60 },
+  { revalidate: 600 },
 );
 
 export async function getCrmContacts(limit = 100) {

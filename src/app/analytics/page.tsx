@@ -5,6 +5,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
+import { CrmDataNotice } from "@/components/crm-data-notice";
 import { PageHeader } from "@/components/showcase";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -75,6 +76,9 @@ export default async function AnalyticsPage() {
         title="Analytics"
         description="WhatsApp CRM performance, AI run health, tags, and pipeline distribution."
       />
+      {analytics.isFallbackData ? (
+        <CrmDataNotice label="cached fallback analytics data" />
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => {
