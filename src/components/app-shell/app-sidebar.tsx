@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronRightIcon } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import {
@@ -115,14 +114,13 @@ function NavMenuItem({
                     isActive={isActive(sub.url)}
                     aria-disabled={sub.disabled || undefined}
                   >
-                    <Link
+                    <a
                       href={sub.url}
-                      prefetch={false}
                       target={sub.external ? "_blank" : undefined}
                       rel={sub.external ? "noreferrer" : undefined}
                     >
                       <span>{sub.title}</span>
-                    </Link>
+                    </a>
                   </SidebarMenuSubButton>
                   {sub.badge !== undefined ? (
                     <SidebarMenuBadge className="bg-primary/10 rounded-full">
@@ -146,15 +144,14 @@ function NavMenuItem({
         isActive={isActive(item.url)}
         aria-disabled={item.disabled || undefined}
       >
-        <Link
+        <a
           href={item.url}
-          prefetch={false}
           target={item.external ? "_blank" : undefined}
           rel={item.external ? "noreferrer" : undefined}
         >
           {item.icon ? <item.icon /> : null}
           <span>{item.title}</span>
-        </Link>
+        </a>
       </SidebarMenuButton>
       {item.badge !== undefined ? (
         <SidebarMenuBadge className="bg-primary/10 top-1/2 right-2 -translate-y-1/2 rounded-full">
