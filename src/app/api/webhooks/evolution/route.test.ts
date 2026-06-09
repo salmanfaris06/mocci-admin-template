@@ -5,6 +5,7 @@ const updateSet = vi.fn();
 const insertedMessages: Record<string, unknown>[] = [];
 const insertedPipelineItems: Record<string, unknown>[] = [];
 const insertedWebhookEvents: Record<string, unknown>[] = [];
+const insertedJobs: Record<string, unknown>[] = [];
 const updatedConversations: Record<string, unknown>[] = [];
 const updatedMessages: Record<string, unknown>[] = [];
 const existingMessagesByEvolutionId = new Map<
@@ -42,7 +43,11 @@ vi.mock("@/server/db/schema", () => ({
     name: "pipelineStages.name",
     position: "pipelineStages.position",
   },
-  webhookEvents: { idempotencyKey: "webhookEvents.idempotencyKey" },
+  webhookEvents: {
+    id: "webhookEvents.id",
+    idempotencyKey: "webhookEvents.idempotencyKey",
+  },
+  jobs: { id: "jobs.id", type: "jobs.type", status: "jobs.status" },
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -75,6 +80,8 @@ vi.mock("@/server/db", () => ({
           insertedPipelineItems.push(value);
         if (table && typeof table === "object" && "idempotencyKey" in table)
           insertedWebhookEvents.push(value);
+        if (table && typeof table === "object" && "type" in table)
+          insertedJobs.push(value);
         return {
           onConflictDoNothing: () => ({
             returning: async () => {
@@ -152,6 +159,7 @@ afterEach(() => {
   insertedMessages.length = 0;
   insertedPipelineItems.length = 0;
   insertedWebhookEvents.length = 0;
+  insertedJobs.length = 0;
   updatedConversations.length = 0;
   updatedMessages.length = 0;
   existingMessagesByEvolutionId.clear();
@@ -202,40 +210,32 @@ describe("Evolution webhook route", () => {
     const response = await handleEvolutionWebhook(request);
     const body = await response.json();
 
+    expect(response.status).toBe(202);
     expect(body).toMatchObject({
       ok: true,
+      queued: true,
       eventType: "MESSAGES_UPSERT",
-      processedMessages: 1,
     });
     expect(insertedWebhookEvents).toEqual([
       expect.objectContaining({
         eventType: "MESSAGES_UPSERT",
-        idempotencyKey: "msg-1",
+        idempotencyKey: "MESSAGES_UPSERT:main:msg-1",
+        status: "queued",
       }),
     ]);
-    expect(insertedMessages).toEqual([
+    expect(insertedJobs).toEqual([
       expect.objectContaining({
-        evolutionMessageId: "msg-1",
-        direction: "inbound",
-        senderType: "customer",
-        messageType: "text",
-        text: "Halo",
+        type: "evolution_webhook_event",
+        status: "queued",
+        payload: expect.objectContaining({
+          webhookEventId: "webhook-event-1",
+          eventType: "MESSAGES_UPSERT",
+        }),
       }),
     ]);
-    expect(updatedConversations).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ lastMessageSummary: "Halo", unreadCount: 1 }),
-      ]),
-    );
-    expect(insertedPipelineItems).toEqual([
-      expect.objectContaining({
-        contactId: "contact-1",
-        conversationId: "conversation-1",
-        stageId: "stage-new",
-        title: "Jane",
-        lastActivityAt: expect.any(Date),
-      }),
-    ]);
+    expect(insertedMessages).toEqual([]);
+    expect(insertedPipelineItems).toEqual([]);
+    expect(triggerAiWhatsAppReplyMock).not.toHaveBeenCalled();
   });
 
   it("keeps duplicate webhook delivery idempotent", async () => {
@@ -268,18 +268,20 @@ describe("Evolution webhook route", () => {
       }),
     );
 
+    expect(firstResponse.status).toBe(202);
     await expect(firstResponse.json()).resolves.toMatchObject({
-      processedMessages: 1,
+      queued: true,
     });
     await expect(secondResponse.json()).resolves.toMatchObject({
-      processedMessages: 0,
+      queued: false,
       duplicate: true,
     });
-    expect(insertedMessages).toHaveLength(1);
-    expect(insertedPipelineItems).toHaveLength(1);
-    expect(updatedConversations.filter((update) => "lastMessageSummary" in update)).toHaveLength(1);
-    expect(triggerAiWhatsAppReplyMock).toHaveBeenCalledTimes(1);
-    expect(publishInboxEventMock).toHaveBeenCalledTimes(2);
+    expect(insertedWebhookEvents).toHaveLength(2);
+    expect(insertedJobs).toHaveLength(1);
+    expect(insertedMessages).toHaveLength(0);
+    expect(insertedPipelineItems).toHaveLength(0);
+    expect(triggerAiWhatsAppReplyMock).not.toHaveBeenCalled();
+    expect(publishInboxEventMock).not.toHaveBeenCalled();
   });
 
   it("updates message status on MESSAGES_UPDATE", async () => {
@@ -304,13 +306,18 @@ describe("Evolution webhook route", () => {
     const response = await handleEvolutionWebhook(request);
     const body = await response.json();
 
+    expect(response.status).toBe(202);
     expect(body).toMatchObject({
       ok: true,
+      queued: true,
       eventType: "MESSAGES_UPDATE",
-      processedUpdates: 1,
     });
-    expect(updatedMessages).toEqual([
-      expect.objectContaining({ status: "delivered" }),
+    expect(updatedMessages).toEqual([]);
+    expect(insertedJobs).toEqual([
+      expect.objectContaining({
+        type: "evolution_webhook_event",
+        status: "queued",
+      }),
     ]);
   });
 });
