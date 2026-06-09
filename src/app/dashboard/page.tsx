@@ -1,4 +1,4 @@
-import { DashboardPageContent } from "./dashboard-page-content";
+import { DashboardPageContent } from "@/components/crm-dashboard-page-content";
 
 export const dynamic = "force-dynamic";
 

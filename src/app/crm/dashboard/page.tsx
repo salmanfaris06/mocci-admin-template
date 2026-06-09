@@ -1,4 +1,4 @@
-import { DashboardPageContent } from "../../dashboard/dashboard-page-content";
+import { DashboardPageContent } from "@/components/crm-dashboard-page-content";
 import { PageHeader } from "@/components/showcase";
 import { Card, CardContent } from "@/components/ui/card";
 
