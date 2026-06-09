@@ -583,6 +583,9 @@ async function withFallbackTimeout<T>(
 
   try {
     return await Promise.race([task, timeout]);
+  } catch (error) {
+    console.warn(`[crm-query] ${label} failed; returning fallback data`, error);
+    return fallback;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
