@@ -9,10 +9,18 @@ export const dynamic = "force-dynamic";
 
 const WORKER_ID = `vercel-${process.pid}`;
 const ERROR_MESSAGE_LIMIT = 1000;
+const DEFAULT_BATCH_LIMIT = 5;
+const MAX_BATCH_LIMIT = 20;
 
 type EvolutionWebhookJobPayload = {
   webhookEventId?: string;
   pathEvent?: string | null;
+};
+
+type ProcessOneResult = {
+  processed: number;
+  failed: number;
+  empty?: boolean;
 };
 
 function secretMatches(actual: string, expected: string) {
@@ -22,17 +30,37 @@ function secretMatches(actual: string, expected: string) {
   return timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
+function isVercelCron(request: Request) {
+  return (
+    request.headers.get("user-agent")?.toLowerCase().includes("vercel-cron") ??
+    false
+  );
+}
+
 function isAuthorized(request: Request) {
   const expectedSecret = process.env.JOBS_PROCESS_SECRET?.trim();
   if (!expectedSecret) return true;
+  if (isVercelCron(request)) return true;
 
-  const actualSecret = request.headers.get("x-jobs-process-secret")?.trim();
+  const headerSecret = request.headers.get("x-jobs-process-secret")?.trim();
+  const bearerSecret = request.headers
+    .get("authorization")
+    ?.trim()
+    .replace(/^Bearer\s+/i, "");
+  const actualSecret = headerSecret || bearerSecret;
+
   return Boolean(actualSecret && secretMatches(actualSecret, expectedSecret));
 }
 
 function safeErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : "Unknown job error";
   return message.slice(0, ERROR_MESSAGE_LIMIT);
+}
+
+function batchLimitFromRequest(request: Request) {
+  const requested = Number(new URL(request.url).searchParams.get("limit"));
+  if (!Number.isFinite(requested) || requested <= 0) return DEFAULT_BATCH_LIMIT;
+  return Math.min(Math.floor(requested), MAX_BATCH_LIMIT);
 }
 
 async function claimNextWebhookJob() {
@@ -65,28 +93,21 @@ async function claimNextWebhookJob() {
   return job;
 }
 
-export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
-    return Response.json(
-      { ok: false, error: "Unauthorized job processor" },
-      { status: 401 },
-    );
-  }
+async function failJob(jobId: string, errorMessage: string) {
+  await db
+    .update(jobs)
+    .set({ status: "failed", errorMessage, updatedAt: new Date() })
+    .where(eq(jobs.id, jobId));
+}
 
+async function processOneWebhookJob(): Promise<ProcessOneResult> {
   const job = await claimNextWebhookJob();
-  if (!job) return Response.json({ ok: true, processed: 0, failed: 0 });
+  if (!job) return { processed: 0, failed: 0, empty: true };
 
   const payload = job.payload as EvolutionWebhookJobPayload;
   if (!payload.webhookEventId) {
-    const errorMessage = "Job payload missing webhookEventId";
-    await db
-      .update(jobs)
-      .set({ status: "failed", errorMessage, updatedAt: new Date() })
-      .where(eq(jobs.id, job.id));
-    return Response.json(
-      { ok: false, processed: 0, failed: 1 },
-      { status: 500 },
-    );
+    await failJob(job.id, "Job payload missing webhookEventId");
+    return { processed: 0, failed: 1 };
   }
 
   const [webhookEvent] = await db
@@ -96,15 +117,8 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (!webhookEvent) {
-    const errorMessage = "Webhook event not found";
-    await db
-      .update(jobs)
-      .set({ status: "failed", errorMessage, updatedAt: new Date() })
-      .where(eq(jobs.id, job.id));
-    return Response.json(
-      { ok: false, processed: 0, failed: 1 },
-      { status: 500 },
-    );
+    await failJob(job.id, "Webhook event not found");
+    return { processed: 0, failed: 1 };
   }
 
   try {
@@ -113,7 +127,7 @@ export async function POST(request: Request) {
       .set({ status: "processing", updatedAt: new Date() })
       .where(eq(webhookEvents.id, webhookEvent.id));
 
-    const result = await processEvolutionWebhookPayload(
+    await processEvolutionWebhookPayload(
       webhookEvent.rawPayload,
       payload.pathEvent ?? undefined,
     );
@@ -127,21 +141,49 @@ export async function POST(request: Request) {
       .set({ status: "succeeded", errorMessage: null, updatedAt: new Date() })
       .where(eq(jobs.id, job.id));
 
-    return Response.json({ ok: true, processed: 1, failed: 0, result });
+    return { processed: 1, failed: 0 };
   } catch (error) {
     const errorMessage = safeErrorMessage(error);
     await db
       .update(webhookEvents)
       .set({ status: "failed", errorMessage, updatedAt: new Date() })
       .where(eq(webhookEvents.id, webhookEvent.id));
-    await db
-      .update(jobs)
-      .set({ status: "failed", errorMessage, updatedAt: new Date() })
-      .where(eq(jobs.id, job.id));
+    await failJob(job.id, errorMessage);
 
+    return { processed: 0, failed: 1 };
+  }
+}
+
+async function processBatch(limit: number) {
+  let processed = 0;
+  let failed = 0;
+
+  for (let index = 0; index < limit; index += 1) {
+    const result = await processOneWebhookJob();
+    processed += result.processed;
+    failed += result.failed;
+    if (result.empty) break;
+  }
+
+  return { ok: failed === 0, processed, failed, limit };
+}
+
+async function handleProcess(request: Request) {
+  if (!isAuthorized(request)) {
     return Response.json(
-      { ok: false, processed: 0, failed: 1 },
-      { status: 500 },
+      { ok: false, error: "Unauthorized job processor" },
+      { status: 401 },
     );
   }
+
+  const result = await processBatch(batchLimitFromRequest(request));
+  return Response.json(result, { status: result.ok ? 200 : 500 });
+}
+
+export async function GET(request: Request) {
+  return handleProcess(request);
+}
+
+export async function POST(request: Request) {
+  return handleProcess(request);
 }
