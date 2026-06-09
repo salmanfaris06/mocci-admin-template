@@ -354,16 +354,24 @@ export async function getCrmDashboardSummary() {
 
   const [[contactCount], [conversationCount], [messageCount], [usageTotals]] =
     await Promise.all([
-      db.select({ count: sql<number>`count(*)::int` }).from(contacts),
-      db.select({ count: sql<number>`count(*)::int` }).from(conversations),
-      db.select({ count: sql<number>`count(*)::int` }).from(messages),
-      db
-        .select({
-          costUsd: sql<string>`coalesce(sum(${aiUsageLogs.computedCostUsd}), 0)::text`,
-          inputTokens: sql<number>`coalesce(sum(${aiUsageLogs.inputTokens}), 0)::int`,
-          outputTokens: sql<number>`coalesce(sum(${aiUsageLogs.outputTokens}), 0)::int`,
-        })
-        .from(aiUsageLogs),
+      measured("contacts count", () =>
+        db.select({ count: sql<number>`count(*)::int` }).from(contacts),
+      ),
+      measured("conversations count", () =>
+        db.select({ count: sql<number>`count(*)::int` }).from(conversations),
+      ),
+      measured("messages count", () =>
+        db.select({ count: sql<number>`count(*)::int` }).from(messages),
+      ),
+      measured("ai usage totals", () =>
+        db
+          .select({
+            costUsd: sql<string>`coalesce(sum(${aiUsageLogs.computedCostUsd}), 0)::text`,
+            inputTokens: sql<number>`coalesce(sum(${aiUsageLogs.inputTokens}), 0)::int`,
+            outputTokens: sql<number>`coalesce(sum(${aiUsageLogs.outputTokens}), 0)::int`,
+          })
+          .from(aiUsageLogs),
+      ),
     ]);
 
   return {
@@ -379,21 +387,23 @@ export async function getCrmDashboardSummary() {
 export async function getRecentConversations(limit = 20) {
   if (!isDatabaseConfigured()) return demoConversations.slice(0, limit);
 
-  return db
-    .select({
-      id: conversations.id,
-      status: conversations.status,
-      aiStatus: conversations.aiStatus,
-      lastMessageSummary: conversations.lastMessageSummary,
-      lastMessageAt: conversations.lastMessageAt,
-      contactName: contacts.displayName,
-      remoteJid: contacts.remoteJid,
-      phone: contacts.phone,
-    })
-    .from(conversations)
-    .innerJoin(contacts, eq(conversations.contactId, contacts.id))
-    .orderBy(desc(conversations.lastMessageAt))
-    .limit(limit);
+  return measured("recent conversations", () =>
+    db
+      .select({
+        id: conversations.id,
+        status: conversations.status,
+        aiStatus: conversations.aiStatus,
+        lastMessageSummary: conversations.lastMessageSummary,
+        lastMessageAt: conversations.lastMessageAt,
+        contactName: contacts.displayName,
+        remoteJid: contacts.remoteJid,
+        phone: contacts.phone,
+      })
+      .from(conversations)
+      .innerJoin(contacts, eq(conversations.contactId, contacts.id))
+      .orderBy(desc(conversations.lastMessageAt))
+      .limit(limit),
+  );
 }
 
 type GetConversationMessagesOptions = {
@@ -477,19 +487,21 @@ export async function getPipelineBoard() {
 export async function getAiRunHistory(limit = 50) {
   if (!isDatabaseConfigured()) return demoAiRuns.slice(0, limit);
 
-  return db
-    .select({
-      id: aiRuns.id,
-      status: aiRuns.status,
-      latencyMs: aiRuns.latencyMs,
-      errorMessage: aiRuns.errorMessage,
-      createdAt: aiRuns.createdAt,
-      contactName: contacts.displayName,
-    })
-    .from(aiRuns)
-    .innerJoin(contacts, eq(aiRuns.contactId, contacts.id))
-    .orderBy(desc(aiRuns.createdAt))
-    .limit(limit);
+  return measured("ai run history", () =>
+    db
+      .select({
+        id: aiRuns.id,
+        status: aiRuns.status,
+        latencyMs: aiRuns.latencyMs,
+        errorMessage: aiRuns.errorMessage,
+        createdAt: aiRuns.createdAt,
+        contactName: contacts.displayName,
+      })
+      .from(aiRuns)
+      .innerJoin(contacts, eq(aiRuns.contactId, contacts.id))
+      .orderBy(desc(aiRuns.createdAt))
+      .limit(limit),
+  );
 }
 
 type PipelineStageSummary = Array<{
@@ -537,28 +549,99 @@ function countBy<T extends string>(values: T[]) {
   return counts;
 }
 
-async function getPipelineStageSummary(): Promise<PipelineStageSummary> {
-  if (!isDatabaseConfigured()) {
-    return demoPipelineBoard.map((stage) => ({
-      stage: stage.name,
-      count: stage.items.length,
-      valueCents: stage.items.reduce(
-        (total, item) => total + (item.valueCents ?? 0),
-        0,
-      ),
-    }));
+function logSlowQuery(name: string, startedAt: number, thresholdMs = 1200) {
+  const durationMs = Date.now() - startedAt;
+  if (durationMs >= thresholdMs) {
+    console.warn(`[crm-query] ${name} took ${durationMs}ms`);
   }
+}
 
-  return db
-    .select({
-      stage: pipelineStages.name,
-      count: sql<number>`count(${pipelineItems.id})::int`,
-      valueCents: sql<number>`coalesce(sum(${pipelineItems.valueCents}), 0)::int`,
-    })
-    .from(pipelineStages)
-    .leftJoin(pipelineItems, eq(pipelineItems.stageId, pipelineStages.id))
-    .groupBy(pipelineStages.id)
-    .orderBy(asc(pipelineStages.position));
+async function measured<T>(name: string, query: () => Promise<T>) {
+  const startedAt = Date.now();
+  try {
+    return await query();
+  } finally {
+    logSlowQuery(name, startedAt);
+  }
+}
+
+async function withFallbackTimeout<T>(
+  task: Promise<T>,
+  fallback: T,
+  label: string,
+  ms = 3500,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timeoutId = setTimeout(() => {
+      console.warn(
+        `[crm-query] ${label} exceeded ${ms}ms; returning fallback data`,
+      );
+      resolve(fallback);
+    }, ms);
+  });
+
+  try {
+    return await Promise.race([task, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+function demoPipelineStageSummary(): PipelineStageSummary {
+  return demoPipelineBoard.map((stage) => ({
+    stage: stage.name,
+    count: stage.items.length,
+    valueCents: stage.items.reduce(
+      (total, item) => total + (item.valueCents ?? 0),
+      0,
+    ),
+  }));
+}
+
+function demoDashboardOverview(): CrmDashboardOverview {
+  const pipelineByStage = demoPipelineStageSummary();
+  return {
+    summary: demoSummary,
+    recentConversations: demoConversations.slice(0, 5),
+    aiRuns: demoAiRuns.slice(0, 5),
+    pipelineByStage,
+    pipelineValueCents: pipelineByStage.reduce(
+      (total, stage) => total + stage.valueCents,
+      0,
+    ),
+    aiSuccessRate: calculateAiSuccessRate(demoAiRuns),
+    unreadConversations: demoContacts.filter(
+      (contact) => contact.unreadCount > 0,
+    ).length,
+  };
+}
+
+function demoAnalyticsOverview(): CrmAnalyticsOverview {
+  return buildCrmAnalyticsOverview({
+    summary: demoSummary,
+    conversationsList: demoConversations,
+    aiRunsList: demoAiRuns,
+    contactsList: demoContacts,
+    pipelineBoard: demoPipelineBoard,
+  });
+}
+
+async function getPipelineStageSummary(): Promise<PipelineStageSummary> {
+  if (!isDatabaseConfigured()) return demoPipelineStageSummary();
+
+  return measured("pipeline stage summary", () =>
+    db
+      .select({
+        stage: pipelineStages.name,
+        count: sql<number>`count(${pipelineItems.id})::int`,
+        valueCents: sql<number>`coalesce(sum(${pipelineItems.valueCents}), 0)::int`,
+      })
+      .from(pipelineStages)
+      .leftJoin(pipelineItems, eq(pipelineItems.stageId, pipelineStages.id))
+      .groupBy(pipelineStages.id)
+      .orderBy(asc(pipelineStages.position)),
+  );
 }
 
 async function getUnreadConversationCount() {
@@ -566,12 +649,129 @@ async function getUnreadConversationCount() {
     return demoContacts.filter((contact) => contact.unreadCount > 0).length;
   }
 
-  const [record] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(conversations)
-    .where(gt(conversations.unreadCount, 0));
+  const [record] = await measured("unread conversations count", () =>
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(conversations)
+      .where(gt(conversations.unreadCount, 0)),
+  );
 
   return record?.count ?? 0;
+}
+
+async function getConversationStatusBreakdown() {
+  if (!isDatabaseConfigured()) {
+    const counts = countBy(
+      demoConversations.map((conversation) => conversation.status),
+    );
+    return Array.from(counts.entries()).map(([status, count]) => ({
+      status,
+      count,
+      percent: percentOf(count, demoConversations.length),
+    }));
+  }
+
+  const records = await measured("conversation status breakdown", () =>
+    db
+      .select({
+        status: conversations.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(conversations)
+      .groupBy(conversations.status),
+  );
+  const total = records.reduce((sum, record) => sum + record.count, 0);
+
+  return records.map((record) => ({
+    status: record.status,
+    count: record.count,
+    percent: percentOf(record.count, total),
+  }));
+}
+
+async function getAiRunStatusBreakdown() {
+  if (!isDatabaseConfigured()) {
+    const counts = countBy(demoAiRuns.map((run) => run.status));
+    return Array.from(counts.entries()).map(([status, count]) => ({
+      status,
+      count,
+      percent: percentOf(count, demoAiRuns.length),
+    }));
+  }
+
+  const records = await measured("ai run status breakdown", () =>
+    db
+      .select({
+        status: aiRuns.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(aiRuns)
+      .groupBy(aiRuns.status),
+  );
+  const total = records.reduce((sum, record) => sum + record.count, 0);
+
+  return records.map((record) => ({
+    status: record.status,
+    count: record.count,
+    percent: percentOf(record.count, total),
+  }));
+}
+
+async function getTopContactTags(limit = 6) {
+  if (!isDatabaseConfigured()) {
+    const counts = countBy(
+      demoContacts.flatMap((contact) => contact.tags ?? []),
+    );
+    return Array.from(counts.entries())
+      .map(([tag, count]) => ({
+        tag,
+        count,
+        percent: percentOf(count, demoContacts.length),
+      }))
+      .sort((left, right) => right.count - left.count)
+      .slice(0, limit);
+  }
+
+  const records = await measured("top contact tags", () =>
+    db.execute(sql<Array<{ tag: string; count: number }>>`
+      select tag, count(*)::int as count
+      from ${contacts}, jsonb_array_elements_text(${contacts.tags}) as tag
+      group by tag
+      order by count desc, tag asc
+      limit ${limit}
+    `),
+  );
+  const [contactTotal] = await measured(
+    "contacts count for tag percentages",
+    () => db.select({ count: sql<number>`count(*)::int` }).from(contacts),
+  );
+  const total = contactTotal?.count ?? 0;
+
+  return (
+    records as unknown as Array<{ tag: string; count: number | string }>
+  ).map((record) => {
+    const count = Number(record.count);
+    return {
+      tag: record.tag,
+      count,
+      percent: percentOf(count, total),
+    };
+  });
+}
+
+async function getAnalyticsAiSuccessRate() {
+  if (!isDatabaseConfigured()) return calculateAiSuccessRate(demoAiRuns);
+
+  const [record] = await measured("ai success rate", () =>
+    db
+      .select({
+        succeeded: sql<number>`count(*) filter (where ${aiRuns.status} = 'succeeded')::int`,
+        completed: sql<number>`count(*) filter (where ${aiRuns.status} in ('succeeded', 'failed', 'timeout'))::int`,
+      })
+      .from(aiRuns),
+  );
+
+  return percentOf(record?.succeeded ?? 0, record?.completed ?? 0);
 }
 
 function calculateAiSuccessRate(
@@ -591,32 +791,40 @@ function calculateAiSuccessRate(
 }
 
 export async function getCrmDashboardOverview(): Promise<CrmDashboardOverview> {
-  const [
-    summary,
-    recentConversations,
-    aiRunsList,
-    pipelineByStage,
-    unreadConversations,
-  ] = await Promise.all([
-    getCrmDashboardSummary(),
-    getRecentConversations(5),
-    getAiRunHistory(5),
-    getPipelineStageSummary(),
-    getUnreadConversationCount(),
-  ]);
+  if (!isDatabaseConfigured()) return demoDashboardOverview();
 
-  return {
-    summary,
-    recentConversations,
-    aiRuns: aiRunsList,
-    pipelineByStage,
-    pipelineValueCents: pipelineByStage.reduce(
-      (total, stage) => total + stage.valueCents,
-      0,
-    ),
-    aiSuccessRate: calculateAiSuccessRate(aiRunsList),
-    unreadConversations,
-  };
+  return withFallbackTimeout(
+    (async () => {
+      const [
+        summary,
+        recentConversations,
+        aiRunsList,
+        pipelineByStage,
+        unreadConversations,
+      ] = await Promise.all([
+        getCrmDashboardSummary(),
+        getRecentConversations(5),
+        getAiRunHistory(5),
+        getPipelineStageSummary(),
+        getUnreadConversationCount(),
+      ]);
+
+      return {
+        summary,
+        recentConversations,
+        aiRuns: aiRunsList,
+        pipelineByStage,
+        pipelineValueCents: pipelineByStage.reduce(
+          (total, stage) => total + stage.valueCents,
+          0,
+        ),
+        aiSuccessRate: calculateAiSuccessRate(aiRunsList),
+        unreadConversations,
+      };
+    })(),
+    demoDashboardOverview(),
+    "dashboard overview",
+  );
 }
 
 export const getCachedCrmDashboardOverview = unstable_cache(
@@ -707,22 +915,48 @@ function buildCrmAnalyticsOverview({
 }
 
 export async function getCrmAnalyticsOverview(): Promise<CrmAnalyticsOverview> {
-  const [summary, conversationsList, aiRunsList, contactsList, pipelineBoard] =
-    await Promise.all([
-      getCrmDashboardSummary(),
-      getRecentConversations(250),
-      getAiRunHistory(250),
-      getCrmContacts(250),
-      getPipelineBoard(),
-    ]);
+  if (!isDatabaseConfigured()) return demoAnalyticsOverview();
 
-  return buildCrmAnalyticsOverview({
-    summary,
-    conversationsList,
-    aiRunsList,
-    contactsList,
-    pipelineBoard,
-  });
+  return withFallbackTimeout(
+    (async () => {
+      const [
+        summary,
+        conversationStatus,
+        aiRunsByStatus,
+        topTags,
+        pipelineByStage,
+        unreadConversations,
+        aiSuccessRate,
+      ] = await Promise.all([
+        getCrmDashboardSummary(),
+        getConversationStatusBreakdown(),
+        getAiRunStatusBreakdown(),
+        getTopContactTags(),
+        getPipelineStageSummary(),
+        getUnreadConversationCount(),
+        getAnalyticsAiSuccessRate(),
+      ]);
+      const pipelineValueCents = pipelineByStage.reduce(
+        (total, stage) => total + stage.valueCents,
+        0,
+      );
+
+      return {
+        kpis: {
+          ...summary,
+          aiSuccessRate,
+          pipelineValueCents,
+          unreadConversations,
+        },
+        conversationStatus,
+        aiRunsByStatus,
+        topTags,
+        pipelineByStage,
+      };
+    })(),
+    demoAnalyticsOverview(),
+    "analytics overview",
+  );
 }
 
 export const getCachedCrmAnalyticsOverview = unstable_cache(
